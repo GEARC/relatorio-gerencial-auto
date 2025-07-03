@@ -79,30 +79,20 @@ def gerar_relatorio_word(dados, data_alvo):
     doc.add_paragraph(f'\n{contador_titulo2}. Cadastro', style='Título 2')
     contador_titulo3 = 1
     
-    # --- 2.1 Evolução das Adesões ---
-    doc.add_paragraph(f"{contador_titulo2}.{contador_titulo3}. Evolução das Adesões", style='Título 3')
-    
-    df_evolucao_raw = dados.get('evolucao_adesoes')
-    if df_evolucao_raw is not None and not df_evolucao_raw.empty:
-        nome_coluna_mes = data_alvo.strftime('%b_%Y').lower()
-        try:
-            aumento_participantes = int(df_evolucao_raw[nome_coluna_mes].sum())
-            texto_dinamico = (f"Com as movimentações ocorridas no mês de {mes_ano_texto}, houve aumento de {aumento_participantes} participantes na base. As ocorrências estão assim distribuídas:")
-            doc.add_paragraph(texto_dinamico, style='CorpoComRecuo')
-        except (KeyError, IndexError):
-            doc.add_paragraph(f"As ocorrências e movimentações do mês de {mes_ano_texto} estão assim distribuídas:", style='CorpoComRecuo')
-            
-    p = doc.add_paragraph("Tabela 1. Evolução mensal das adesões")
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    df_evolucao_formatado = transformar_dados_evolucao(dados.get('evolucao_adesoes'))
-    caminho_imagem_tabela1 = os.path.join('assets', 'tabela_evolucao.png')
-    if gerar_imagem_tabela(df_evolucao_formatado, caminho_imagem_tabela1):
-        doc.add_picture(caminho_imagem_tabela1, width=Inches(6.2))
-    doc.add_paragraph("Fonte: DISEG/GEARC")
-    contador_titulo3 += 1
+    # --- SEÇÃO 2.1 EVOLUÇÃO DAS ADESÕES FOI TEMPORARIAMENTE DESATIVADA ---
+    # Quando a query estiver pronta, podemos reativar este bloco.
+    #
+    # doc.add_paragraph(f"{contador_titulo2}.{contador_titulo3}. Evolução das Adesões", style='Título 3')
+    # df_evolucao_formatado = transformar_dados_evolucao(dados.get('evolucao_adesoes'))
+    # caminho_imagem_tabela1 = os.path.join('assets', 'tabela_evolucao.png')
+    # if gerar_imagem_tabela(df_evolucao_formatado, caminho_imagem_tabela1):
+    #     doc.add_picture(caminho_imagem_tabela1, width=Inches(6.2))
+    # doc.add_paragraph("Fonte: DISEG/GEARC")
+    # contador_titulo3 += 1
+    # --------------------------------------------------------------------
 
-    # --- 2.2 Distribuição de participantes por sexo ---
-    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Distribuição de participantes por sexo", style='Título 3')
+   # --- 2.1 (antes 2.2) Distribuição de participantes por sexo ---
+    doc.add_paragraph(f"{contador_titulo2}.{contador_titulo3}. Distribuição de participantes por sexo", style='Título 3')
     df_sexo = dados.get('distribuicao_sexo')
     if df_sexo is not None and not df_sexo.empty:
         try:
@@ -124,35 +114,31 @@ def gerar_relatorio_word(dados, data_alvo):
         doc.add_paragraph("[Dados de distribuição por sexo não encontrados.]", style='CorpoComRecuo')
     contador_titulo3 += 1
 
-    # --- 2.3 Distribuição de participantes por Sexo e Grupos de Idade ---
+    # --- 2.2 (antes 2.3) Distribuição de participantes por Sexo e Grupos de Idade ---
     doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Distribuição de participantes por Sexo e Grupos de Idade", style='Título 3')
-    
-    # --- LÓGICA ATUALIZADA PARA O TEXTO DINÂMICO DA FAIXA ETÁRIA ---
     df_piramide = dados.get('piramide_etaria')
     if df_piramide is not None and not df_piramide.empty:
         try:
-            # Agrupa por faixa etária e soma as quantidades para encontrar o total por faixa
             contagem_por_faixa = df_piramide.groupby('Faixa_Etaria')['QTD'].sum()
-            # Encontra o nome da faixa (o índice) com o valor máximo
             maior_faixa = contagem_por_faixa.idxmax()
             texto_concentracao = f"A concentração de participantes está distribuída entre as idades de {maior_faixa}."
             doc.add_paragraph(texto_concentracao, style='CorpoComRecuo')
         except Exception as e:
             print(f"Erro ao calcular a maior faixa etária: {e}")
-            # Texto genérico em caso de falha
             doc.add_paragraph("A concentração de participantes está distribuída entre as idades de 36 a 44 anos.", style='CorpoComRecuo')
     else:
-        # Texto genérico se não houver dados
         doc.add_paragraph("A concentração de participantes está distribuída entre as idades de 36 a 44 anos.", style='CorpoComRecuo')
-    # --- FIM DA LÓGICA ---
     
     p = doc.add_paragraph("Gráfico 1. Distribuição de participantes por sexo e grupo de idade*")
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_grafico_piramide = os.path.join('assets', 'grafico_piramide_etaria.png')
-    if criar_grafico_piramide_etaria(df_piramide, caminho_grafico_piramide):
-        doc.add_picture(caminho_grafico_piramide, width=Inches(6.2))
+    if df_piramide is not None:
+        if criar_grafico_piramide_etaria(df_piramide, caminho_grafico_piramide):
+            doc.add_picture(caminho_grafico_piramide, width=Inches(6.2))
+        else:
+            doc.add_paragraph("[Falha ao gerar o gráfico de pirâmide etária.]")
     else:
-        doc.add_paragraph("[Falha ao gerar o gráfico de pirâmide etária.]")
+        doc.add_paragraph("[Dados para o gráfico de pirâmide não foram encontrados.]")
     doc.add_paragraph("Fonte: DISEG/GEARC")
     
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"

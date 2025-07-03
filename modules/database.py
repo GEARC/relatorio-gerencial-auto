@@ -1,7 +1,9 @@
+# modules/database.py (VERSÃO SIMPLIFICADA)
+
 import pandas as pd
 from sqlalchemy import create_engine
 import urllib
-from config import DB_CONFIG # Importa a configuração
+from config import DB_CONFIG
 
 def conectar_banco():
     """Estabelece e retorna um 'engine' do SQLAlchemy."""
@@ -19,6 +21,8 @@ def conectar_banco():
         print(f"Erro ao conectar: {e}")
         return None
 
+# --- FUNÇÃO SIMPLIFICADA ---
+# Removemos o argumento 'params' pois não será mais usado
 def buscar_dados(query, engine):
     """Executa uma query e retorna os dados como um DataFrame pandas."""
     try:

@@ -1,40 +1,39 @@
-# main.py (VERSÃO CORRIGIDA)
+# main.py (VERSÃO FINAL COM CONSULTA FORMATADA EM PYTHON)
 
+import pandas as pd
+from sqlalchemy import create_engine
+import urllib
 import datetime
 import locale
-from config import DB_CONFIG
-# Adicionando a importação que estava faltando
-from queries.grafico1_piramide_etaria import QUERY as query_piramide_etaria
-from queries.tabela1_evolucao_adesoes import QUERY as query_evolucao_adesoes
-from queries.tabela2_distribuicao_sexo import QUERY as query_distribuicao_sexo
-from modules.database import conectar_banco, buscar_dados
-from modules.relatorio import gerar_relatorio_word, converter_docx_para_pdf
+import os
+import win32com.client
+import pythoncom
 
+# --- Módulos do projeto ---
+from config import DB_CONFIG
+from modules.relatorio import gerar_relatorio_word, converter_docx_para_pdf
+from modules.database import conectar_banco, buscar_dados
+from queries.tabela2_distribuicao_sexo import QUERY as query_distribuicao_sexo
+from queries.grafico1_piramide_etaria import QUERY as query_piramide_etaria
+# A query de evolução continua desativada
 
 def solicitar_data_relatorio():
     """Solicita ao usuário o ano e o mês para o relatório."""
     while True:
         try:
             ano = int(input(">>> Digite o ano do relatório (ex: 2025): "))
-            if 2000 < ano < 2100:
-                break
-            else:
-                print("Ano inválido, por favor tente novamente.")
-        except ValueError:
-            print("Entrada inválida. Por favor, digite um número para o ano.")
+            if 2000 < ano < 2100: break
+            else: print("Ano inválido, por favor tente novamente.")
+        except ValueError: print("Entrada inválida. Por favor, digite um número para o ano.")
     
     while True:
         try:
             mes = int(input(">>> Digite o mês do relatório (ex: 5 para maio): "))
-            if 1 <= mes <= 12:
-                break
-            else:
-                print("Mês inválido, por favor digite um número de 1 a 12.")
-        except ValueError:
-            print("Entrada inválida. Por favor, digite um número para o mês.")
+            if 1 <= mes <= 12: break
+            else: print("Mês inválido, por favor digite um número de 1 a 12.")
+        except ValueError: print("Entrada inválida. Por favor, digite um número para o mês.")
             
     return datetime.date(ano, mes, 1)
-
 
 def main():
     """Função principal que orquestra a automação do relatório."""
@@ -42,23 +41,27 @@ def main():
     
     data_alvo = solicitar_data_relatorio()
     
+    # Constrói o texto da data que será inserido na consulta, ex: '202505'
+    texto_data_para_query = f"{data_alvo.year}{data_alvo.month:02d}"
+    
     print(f"\nGerando relatório para o período de {data_alvo.strftime('%B de %Y')}...")
     
     engine = conectar_banco()
-    if engine is None: 
-        return
+    if engine is None: return
 
     dados_relatorio = {}
     
-    print("\nBuscando dados para Evolução das Adesões...")
-    dados_relatorio['evolucao_adesoes'] = buscar_dados(query_evolucao_adesoes, engine)
+    # --- LÓGICA ATUALIZADA: FORMATANDO A QUERY DIRETAMENTE ---
     
     print("\nBuscando dados para Distribuição por Sexo...")
-    dados_relatorio['distribuicao_sexo'] = buscar_dados(query_distribuicao_sexo, engine)
+    # Substitui o '?' na query pelo texto da data, que já está entre aspas
+    query_sexo_dinamica = query_distribuicao_sexo.replace('?', f"'{texto_data_para_query}'")
+    dados_relatorio['distribuicao_sexo'] = buscar_dados(query_sexo_dinamica, engine)
     
-    # --- CORREÇÃO: LINHA DE BUSCA DE DADOS DO GRÁFICO ADICIONADA ---
     print("\nBuscando dados para o Gráfico de Pirâmide Etária...")
-    dados_relatorio['piramide_etaria'] = buscar_dados(query_piramide_etaria, engine)
+    # Faz o mesmo para a outra consulta
+    query_piramide_dinamica = query_piramide_etaria.replace('?', f"'{texto_data_para_query}'")
+    dados_relatorio['piramide_etaria'] = buscar_dados(query_piramide_dinamica, engine)
     
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)
     
@@ -66,7 +69,6 @@ def main():
         converter_docx_para_pdf(nome_arquivo_docx)
 
     print("\n--- Processo finalizado com sucesso! ---")
-
 
 if __name__ == "__main__":
     try:
