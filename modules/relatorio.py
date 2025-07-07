@@ -116,7 +116,8 @@ def gerar_relatorio_word(dados, data_alvo):
             total_geral = total_masc + total_fem
             if total_geral > 0:
                 percentual_masc = (total_masc / total_geral) * 100
-                doc.add_paragraph(f"Atualmente, os homens representam a maior parcela de participantes no plano, correspondendo a {percentual_masc:.2f}% da base total.", style='CorpoComRecuo')
+                percentual_fem = (total_fem / total_geral) * 100
+                doc.add_paragraph(f"Atualmente, o percentual de paricipantes está representado em {percentual_masc:.2f}% e {percentual_fem:.2f}% de mulheres.", style='CorpoComRecuo')
             tabela_sexo_resumo = pd.DataFrame({'SITUAÇÃO': ['Total de Participantes'], 'FEMININO': [total_fem], 'MASCULINO': [total_masc], 'TOTAL GERAL': [total_geral]})
             caminho_imagem_tabela_sexo = os.path.join('assets', 'tabela_sexo.png')
             if gerar_imagem_tabela(tabela_sexo_resumo, caminho_imagem_tabela_sexo):
@@ -135,11 +136,11 @@ def gerar_relatorio_word(dados, data_alvo):
         try:
             contagem_por_faixa = df_piramide.groupby('Faixa_Etaria')['QTD'].sum()
             maior_faixa = contagem_por_faixa.idxmax()
-            texto_concentracao = f"A concentração de participantes está distribuída entre as idades de {maior_faixa}."
+            texto_concentracao = f"A maior concentração de participantes está distribuída entre as idades de {maior_faixa}."
             doc.add_paragraph(texto_concentracao, style='CorpoComRecuo')
         except Exception as e:
             print(f"Erro ao calcular a maior faixa etária: {e}")
-            doc.add_paragraph("A concentração de participantes está distribuída entre as idades de 36 a 44 anos.", style='CorpoComRecuo')
+            doc.add_paragraph(f"{texto_concentracao}", style='CorpoComRecuo')
     else:
         doc.add_paragraph("A concentração de participantes está distribuída entre as idades de 36 a 44 anos.", style='CorpoComRecuo')
     
@@ -155,6 +156,31 @@ def gerar_relatorio_word(dados, data_alvo):
         doc.add_paragraph("[Dados para o gráfico de pirâmide não foram encontrados.]")
     doc.add_paragraph("Fonte: DISEG/GEARC")
     
+  # --- 3. ADICIONA A NOVA SEÇÃO 2.4 ---
+    contador_titulo2 = 2 # Assumindo que estamos na seção 2
+    contador_titulo3 = 4 # Próximo número disponível
+    
+    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Distribuição de participantes por Cargos e Categoria", style='Título 3')
+    
+    p_legenda_t2 = doc.add_paragraph("Tabela 2. Distribuição de participantes por cargo")
+    p_legenda_t2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_legenda_t2.paragraph_format.space_after = Pt(6)
+    
+    df_cargos = dados.get('distribuicao_cargos')
+    caminho_imagem_tabela_cargos = os.path.join('assets', 'tabela_cargos.png')
+    
+    if df_cargos is not None and not df_cargos.empty:
+        if gerar_imagem_tabela(df_cargos, caminho_imagem_tabela_cargos):
+            doc.add_picture(caminho_imagem_tabela_cargos, width=Inches(4.2))
+            paragrafo_imagem = doc.paragraphs[-1]
+            paragrafo_imagem.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragrafo_imagem.paragraph_format.space_before = Pt(0)
+    else:
+        doc.add_paragraph("[Dados para a tabela de distribuição por cargos não foram encontrados.]", style='CorpoComRecuo')
+        
+    p_fonte_t2 = doc.add_paragraph("Fonte: DISEG/GEARC")
+    p_fonte_t2.paragraph_format.space_before = Pt(6)
+
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
     doc.save(nome_arquivo)
     print(f"\nRelatório '{nome_arquivo}' gerado com sucesso!")

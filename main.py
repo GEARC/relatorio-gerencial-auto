@@ -13,6 +13,7 @@ from modules.relatorio import gerar_relatorio_word, converter_docx_para_pdf
 from modules.database import conectar_banco, buscar_dados
 from queries.tabela1_evolucao_adesoes import gerar_query as gerar_query_evolucao
 from queries.tabela2_distribuicao_sexo import QUERY as query_distribuicao_sexo
+from queries.tabela3_distribuicao_cargos import QUERY as query_distribuicao_cargos
 from queries.grafico1_piramide_etaria import QUERY as query_piramide_etaria
 
 def solicitar_data_relatorio():
@@ -69,6 +70,11 @@ def main():
     # Faz o mesmo para a outra consulta
     query_piramide_dinamica = query_piramide_etaria.replace('?', f"'{param_texto_data}'")
     dados_relatorio['piramide_etaria'] = buscar_dados(query_piramide_dinamica, engine)
+
+      # --- 2. EXECUTA A NOVA QUERY ---
+    print("\nBuscando dados para Distribuição por Cargos...")
+    query_cargos_dinamica = query_distribuicao_cargos.replace('?', f"'{param_texto_data}'")
+    dados_relatorio['distribuicao_cargos'] = buscar_dados(query_cargos_dinamica, engine)
     
     # --- Geração dos arquivos ---
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)
