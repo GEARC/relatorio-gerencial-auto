@@ -1,5 +1,3 @@
-# modules/database.py (VERSÃO SIMPLIFICADA)
-
 import pandas as pd
 from sqlalchemy import create_engine
 import urllib
@@ -23,10 +21,14 @@ def conectar_banco():
 
 # --- FUNÇÃO SIMPLIFICADA ---
 # Removemos o argumento 'params' pois não será mais usado
-def buscar_dados(query, engine):
-    """Executa uma query e retorna os dados como um DataFrame pandas."""
+def buscar_dados(query, engine, params=None):
+    """
+    Executa uma query e retorna os dados como um DataFrame pandas.
+    Agora aceita um argumento 'params' opcional.
+    """
     try:
-        df = pd.read_sql(query, engine)
+        # A função read_sql agora usa o argumento 'params' que foi passado
+        df = pd.read_sql(query, engine, params=params)
         print(f"Consulta executada: {len(df)} linhas retornadas.")
         return df
     except Exception as e:

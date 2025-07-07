@@ -1,5 +1,3 @@
-# main.py (VERSÃO FINAL COM CONSULTA FORMATADA EM PYTHON)
-
 import pandas as pd
 from sqlalchemy import create_engine
 import urllib
@@ -13,9 +11,9 @@ import pythoncom
 from config import DB_CONFIG
 from modules.relatorio import gerar_relatorio_word, converter_docx_para_pdf
 from modules.database import conectar_banco, buscar_dados
+from queries.tabela1_evolucao_adesoes import gerar_query as gerar_query_evolucao
 from queries.tabela2_distribuicao_sexo import QUERY as query_distribuicao_sexo
 from queries.grafico1_piramide_etaria import QUERY as query_piramide_etaria
-# A query de evolução continua desativada
 
 def solicitar_data_relatorio():
     """Solicita ao usuário o ano e o mês para o relatório."""
@@ -40,9 +38,8 @@ def main():
     print("--- Automação do Relatório Gerencial ---")
     
     data_alvo = solicitar_data_relatorio()
-    
-    # Constrói o texto da data que será inserido na consulta, ex: '202505'
-    texto_data_para_query = f"{data_alvo.year}{data_alvo.month:02d}"
+    ano_alvo = data_alvo.year
+    mes_alvo = data_alvo.month
     
     print(f"\nGerando relatório para o período de {data_alvo.strftime('%B de %Y')}...")
     
@@ -51,18 +48,29 @@ def main():
 
     dados_relatorio = {}
     
-    # --- LÓGICA ATUALIZADA: FORMATANDO A QUERY DIRETAMENTE ---
+    # --- LÓGICA DE QUERY DINÂMICA UNIFICADA ---
+    # Para todas as queries, vamos construir a string completa em Python.
+    
+    # 1. Gerar query de Evolução (método já estava correto)
+    print("\nBuscando dados para Evolução das Adesões...")
+    query_evolucao_dinamica = gerar_query_evolucao(ano_alvo, mes_alvo)
+    dados_relatorio['evolucao_adesoes'] = buscar_dados(query_evolucao_dinamica, engine)
+    
+    # 2. Gerar as outras queries dinamicamente, substituindo o '?'
+    param_texto_data = f"{ano_alvo}{mes_alvo:02d}"
     
     print("\nBuscando dados para Distribuição por Sexo...")
     # Substitui o '?' na query pelo texto da data, que já está entre aspas
-    query_sexo_dinamica = query_distribuicao_sexo.replace('?', f"'{texto_data_para_query}'")
+    query_sexo_dinamica = query_distribuicao_sexo.replace('?', f"'{param_texto_data}'")
+    # Executa a query completa, sem enviar 'params'
     dados_relatorio['distribuicao_sexo'] = buscar_dados(query_sexo_dinamica, engine)
     
     print("\nBuscando dados para o Gráfico de Pirâmide Etária...")
     # Faz o mesmo para a outra consulta
-    query_piramide_dinamica = query_piramide_etaria.replace('?', f"'{texto_data_para_query}'")
+    query_piramide_dinamica = query_piramide_etaria.replace('?', f"'{param_texto_data}'")
     dados_relatorio['piramide_etaria'] = buscar_dados(query_piramide_dinamica, engine)
     
+    # --- Geração dos arquivos ---
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)
     
     if nome_arquivo_docx:
