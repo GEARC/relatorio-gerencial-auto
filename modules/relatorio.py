@@ -7,6 +7,9 @@ import pandas as pd
 from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml
+from docx.shared import RGBColor
 
 # Importa as funções dos outros módulos que serão usadas aqui
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria
@@ -50,6 +53,52 @@ def garantir_estilos(doc):
             if 'first_line_indent' in props:
                 new_style.paragraph_format.first_line_indent = props['first_line_indent']
 
+def adicionar_tabela_nativa_word(documento, df):
+    """Adiciona uma tabela nativa, estilizada e compacta ao Word."""
+    if df.empty:
+        documento.add_paragraph("[Dados da tabela não encontrados.]", style='CorpoComRecuo')
+        return
+
+    table = documento.add_table(rows=1, cols=len(df.columns))
+    table.style = 'Table Grid'
+    
+    # Adiciona e estiliza o cabeçalho
+    hdr_cells = table.rows[0].cells
+    for i, col_name in enumerate(df.columns):
+        cell = hdr_cells[i]
+        run = cell.paragraphs[0].add_run(str(col_name))
+        run.font.bold = True
+        run.font.color.rgb = RGBColor(255, 255, 255)
+        # Ajusta o espaçamento do parágrafo do cabeçalho
+        cell.paragraphs[0].paragraph_format.space_before = Pt(6)
+        cell.paragraphs[0].paragraph_format.space_after = Pt(6)
+        # Colore o fundo da célula
+        shading_elm = parse_xml(r'<w:shd {} w:fill="0F406D"/>'.format(nsdecls('w')))
+        cell._tc.get_or_add_tcPr().append(shading_elm)
+    
+    table.rows[0]._tr.get_or_add_trPr().append(parse_xml(r'<w:tblHeader {}/>'.format(nsdecls('w'))))
+
+    # Adiciona as linhas de dados
+    for _, row_data in df.iterrows():
+        row_cells = table.add_row().cells
+        # Verifica se esta é a linha de "TOTAIS"
+        is_total_row = str(row_data.iloc[0]) == 'TOTAIS'
+        
+        for i, cell_data in enumerate(row_data):
+            cell = row_cells[i]
+            cell.text = str(cell_data)
+            paragraph = cell.paragraphs[0]
+            
+            # --- CORREÇÃO 1: Deixa a tabela mais compacta ---
+            # Remove o espaçamento antes e depois dos parágrafos em todas as células de dados
+            p_format = paragraph.paragraph_format
+            p_format.space_before = Pt(3)
+            p_format.space_after = Pt(3)
+            
+            # --- CORREÇÃO 2: Deixa a linha de TOTAIS em negrito ---
+            if is_total_row:
+                for run in paragraph.runs:
+                    run.font.bold = True
 
 def gerar_relatorio_word(dados, data_alvo):
     """Gera o documento Word completo com todas as seções."""
@@ -119,7 +168,7 @@ def gerar_relatorio_word(dados, data_alvo):
             if total_geral > 0:
                 percentual_masc = (total_masc / total_geral) * 100
                 percentual_fem = (total_fem / total_geral) * 100
-                doc.add_paragraph(f"Atualmente, o percentual de paricipantes está representado em {percentual_masc:.2f}% e {percentual_fem:.2f}% de mulheres.", style='CorpoComRecuo')
+                doc.add_paragraph(f"Atualmente, o percentual de participantes está representado em {percentual_masc:.2f}% e {percentual_fem:.2f}% de mulheres.", style='CorpoComRecuo')
             tabela_sexo_resumo = pd.DataFrame({'SITUAÇÃO': ['Total de Participantes'], 'FEMININO': [total_fem], 'MASCULINO': [total_masc], 'TOTAL GERAL': [total_geral]})
             caminho_imagem_tabela_sexo = os.path.join('assets', 'tabela_sexo.png')
             if gerar_imagem_tabela(tabela_sexo_resumo, caminho_imagem_tabela_sexo):
@@ -218,6 +267,23 @@ def gerar_relatorio_word(dados, data_alvo):
     if criar_grafico_barras_verticais(df_adesao_acumulado, caminho_g3, "Total de Participantes por Ramo"):
         doc.add_picture(caminho_g3, width=Inches(6.2))
     doc.add_paragraph("Fonte: DISEG/GEARC")
+
+    # --- NOVA SEÇÃO 2.5: ADESÕES POR PATROCINADOR ---
+   # --- 2.5 Adesões por Patrocinador ---
+    contador_titulo2 = 2 # Exemplo
+    contador_titulo3 = 5 # Exemplo
+    
+    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Adesões por Patrocinador", style='Título 3')
+    
+    p_legenda_t3 = doc.add_paragraph("Tabela 3. Adesões por patrocinador")
+    p_legenda_t3.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_legenda_t3.paragraph_format.space_before = Pt(12)
+    p_legenda_t3.paragraph_format.space_after = Pt(6)
+
+    adicionar_tabela_nativa_word(doc, dados.get('adesoes_patrocinador'))
+
+    p_fonte_t3 = doc.add_paragraph("Fonte: DISEG/GEARC")
+    p_fonte_t3.paragraph_format.space_before = Pt(6)
 
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
     doc.save(nome_arquivo)
