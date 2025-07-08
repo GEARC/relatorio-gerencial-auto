@@ -18,6 +18,8 @@ from queries.grafico1_piramide_etaria import QUERY as query_piramide_etaria
 from queries.grafico2_adesao_ramo_mes import gerar_query as gerar_query_g2_ramo_mes
 from queries.grafico3_adesao_ramo_acumulado import gerar_query as gerar_query_g3_ramo_acumulado
 from queries.tabela4_adesoes_patrocinador import gerar_query as gerar_query_patrocinador
+from queries.grafico4_tributacao_mes import gerar_query as gerar_query_g4_tributacao
+from queries.grafico5_tributacao_acumulado import gerar_query as gerar_query_g5_tributacao
 
 def solicitar_data_relatorio():
     """Solicita ao usuário o ano e o mês para o relatório."""
@@ -94,6 +96,14 @@ def main():
     print("\nBuscando dados para Adesões por Patrocinador...")
     query_patrocinador_dinamica = gerar_query_patrocinador(ano_alvo, mes_alvo)
     dados_relatorio['adesoes_patrocinador'] = buscar_dados(query_patrocinador_dinamica, engine)
+
+    print("\nBuscando dados para o Gráfico Mensal de Regime de Tributação...")
+    query_g4_dinamica = gerar_query_g4_tributacao(ano_alvo, mes_alvo)
+    dados_relatorio['regime_tributacao_mes'] = buscar_dados(query_g4_dinamica, engine)
+
+    print("\nBuscando dados para o Gráfico de Regime de Tributação...")
+    query_g5_dinamica = gerar_query_g5_tributacao(ano_alvo, mes_alvo)
+    dados_relatorio['regime_tributacao_acumulado'] = buscar_dados(query_g5_dinamica, engine)
     
     # --- Geração dos arquivos ---
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)

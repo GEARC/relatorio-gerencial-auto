@@ -2,9 +2,11 @@ import os
 import imgkit
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-import pandas as pd # Adicione esta importação se ainda não tiver
-from config import PATH_WKHTMLTOIMAGE # Importa o caminho da configuração
-import textwrap # Importa a biblioteca para quebra de texto
+import matplotlib.colors as mcolors
+import pandas as pd
+import numpy as np
+from config import PATH_WKHTMLTOIMAGE
+import textwrap
 
 config = imgkit.config(wkhtmltoimage=PATH_WKHTMLTOIMAGE)
 
@@ -111,4 +113,71 @@ def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico):
     plt.savefig(caminho_para_salvar, dpi=300) # bbox_inches='tight' removido em favor de tight_layout()
     plt.close(fig)
     print(f"Gráfico de barras gerado: {caminho_para_salvar}")
+    return True
+
+def criar_grafico_donut(df, caminho_para_salvar, titulo_grafico):
+    """Cria um gráfico de donut com rótulos de porcentagem posicionados de forma inteligente."""
+    if df.empty:
+        print(f"DataFrame vazio, não é possível gerar o gráfico '{titulo_grafico}'.")
+        return False
+
+    mapeamento_tributacao = { 'R': 'Regressiva', 'P': 'Progressiva', 'N': 'No prazo de opção*' }
+    df['Legenda'] = df.iloc[:, 0].map(mapeamento_tributacao).fillna(df.iloc[:, 0])
+    
+    labels_legenda = df['Legenda']
+    valores = pd.to_numeric(df.iloc[:, 1])
+    
+    cores = ['#DD7E2E', '#0F406D', '#5DADE2']
+    
+    plt.style.use('seaborn-v0_8-whitegrid')
+    fig, ax = plt.subplots(figsize=(10, 7), subplot_kw=dict(aspect="equal"))
+
+    # Plota a base do gráfico sem nenhum texto automático
+    wedges, texts = ax.pie(
+        valores,
+        startangle=90,
+        colors=cores,
+        wedgeprops=dict(width=0.4, edgecolor='w')
+    )
+
+    # --- LÓGICA DE POSICIONAMENTO CONDICIONAL ---
+    total = sum(valores)
+    limite_para_texto_interno = 10  # Limite de 10% para o texto ficar dentro
+
+    for i, p in enumerate(wedges):
+        percentual = (valores.iloc[i] / total) * 100
+        
+        # Pega o ângulo e o raio do meio da fatia
+        ang = (p.theta2 - p.theta1) / 2. + p.theta1
+        
+        # Se a fatia for pequena, coloca o texto FORA
+        if percentual < limite_para_texto_interno:
+            # Posição fora do gráfico (raio > 1.0)
+            y = np.sin(np.deg2rad(ang))
+            x = np.cos(np.deg2rad(ang))
+            # Alinha o texto para fora
+            horizontalalignment = {-1: "right", 1: "left"}[int(np.sign(x))]
+            ax.text(x * 1.1, y * 1.1, f'{percentual:.0f}%', ha=horizontalalignment, va='center', color='black', size=10)
+        
+        # Se a fatia for grande, coloca o texto DENTRO
+        else:
+            # Posição dentro do anel
+            y = np.sin(np.deg2rad(ang)) * 0.85
+            x = np.cos(np.deg2rad(ang)) * 0.85
+            
+            # Lógica para cor de texto visível
+            slice_color = wedges[i].get_facecolor()
+            r, g, b, _ = slice_color
+            luminance = 0.299*r + 0.587*g + 0.114*b
+            text_color = 'black' if luminance > 0.5 else 'white'
+            
+            ax.text(x, y, f'{percentual:.0f}%', ha='center', va='center', color=text_color, weight='bold', size=12)
+
+    ax.axis('equal')
+    ax.legend(wedges, labels_legenda, title="Regime", loc="center left", bbox_to_anchor=(1.05, 0.5), frameon=False)
+    ax.set_title(titulo_grafico, fontsize=16, pad=20)
+    
+    plt.savefig(caminho_para_salvar, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Gráfico de donut gerado: {caminho_para_salvar}")
     return True

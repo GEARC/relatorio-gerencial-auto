@@ -15,7 +15,7 @@ from docx.shared import RGBColor
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais
 from modules.processamento import transformar_dados_evolucao
-
+from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais, criar_grafico_donut
 
 def garantir_estilos(doc):
     """Verifica e formata os estilos essenciais do documento."""
@@ -139,7 +139,7 @@ def gerar_relatorio_word(dados, data_alvo):
             df_temp = df_evolucao_formatado.set_index('Mês/Ano')
             aumento_participantes = int(df_temp.loc[nome_linha_mes, 'Total'])
             
-            texto_dinamico = f"Com as movimentações ocorridas no mês de {mes_ano_texto}, houve aumento de {aumento_participantes} participantes na base. As ocorrências estão assim distribuídas:"
+            texto_dinamico = f"Com as movimentações ocorridas no mês de {mes_ano_texto}, houve a entrada de {aumento_participantes} participantes na base. As ocorrências estão assim distribuídas:"
             doc.add_paragraph(texto_dinamico, style='CorpoComRecuo')
         except (KeyError, IndexError, Exception) as e:
             print(f"Aviso: Não foi possível calcular a variação do mês para o texto dinâmico. Erro: {e}")
@@ -209,7 +209,7 @@ def gerar_relatorio_word(dados, data_alvo):
     
   # --- 3. ADICIONA A NOVA SEÇÃO 2.4 ---
     contador_titulo2 = 2 # Assumindo que estamos na seção 2
-    contador_titulo3 = 4 # Próximo número disponível
+    contador_titulo3 += 1  # Próximo número disponível
     
     doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Distribuição de participantes por Cargos e Categoria", style='Título 3')
     
@@ -271,7 +271,7 @@ def gerar_relatorio_word(dados, data_alvo):
     # --- NOVA SEÇÃO 2.5: ADESÕES POR PATROCINADOR ---
    # --- 2.5 Adesões por Patrocinador ---
     contador_titulo2 = 2 # Exemplo
-    contador_titulo3 = 5 # Exemplo
+    contador_titulo3 += 1 # Exemplo
     
     doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Adesões por Patrocinador", style='Título 3')
     
@@ -285,10 +285,59 @@ def gerar_relatorio_word(dados, data_alvo):
     p_fonte_t3 = doc.add_paragraph("Fonte: DISEG/GEARC")
     p_fonte_t3.paragraph_format.space_before = Pt(6)
 
+
+     # --- SEÇÃO ATUALIZADA: REGIME DE TRIBUTAÇÃO ---
+    contador_titulo3 += 1
+    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Regime de Tributação (Imposto de Renda)", style='Título 3')
+
+    # --- Gráfico 4: MENSAL ---
+    df_tributacao_mes = dados.get('regime_tributacao_mes')
+    if df_tributacao_mes is not None and not df_tributacao_mes.empty:
+        # Lógica para o texto dinâmico
+        try:
+            total_mes = df_tributacao_mes['Quantidade'].sum()
+            # Ajuste 'R' para o código real de 'Regressiva' no seu banco
+            qtd_regressiva = df_tributacao_mes[df_tributacao_mes['IC_TRIBUTACAO'] == 'R']['Quantidade'].iloc[0]
+            perc_regressiva = (qtd_regressiva / total_mes) * 100
+            doc.add_paragraph(f"Em {data_alvo.strftime('%B/%Y')}, o perfil de tributação demonstra a preferência de {perc_regressiva:.0f}% dos participantes pelo regime regressivo.", style='CorpoComRecuo')
+        except (IndexError, KeyError):
+            doc.add_paragraph(f"Opções de tributação para novas adesões em {data_alvo.strftime('%B/%Y')}.", style='CorpoComRecuo')
+
+        p_legenda_g4 = doc.add_paragraph(f"Gráfico 4. Distribuição regime de tributação ({data_alvo.strftime('%B/%Y')})")
+        p_legenda_g4.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        caminho_g4 = os.path.join('assets', 'grafico_tributacao_mes.png')
+        if criar_grafico_donut(df_tributacao_mes, caminho_g4, f"Regime de Tributação ({data_alvo.strftime('%B/%Y')})"):
+            doc.add_picture(caminho_g4, width=Inches(5.0))
+            paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    else:
+        doc.add_paragraph(f"Não houve novas adesões com opção de tributação em {mes_ano_texto}.", style='CorpoComRecuo')
+
+
+    # --- Gráfico 5: ACUMULADO ---
+    df_tributacao_acumulado = dados.get('regime_tributacao_acumulado')
+    if df_tributacao_acumulado is not None and not df_tributacao_acumulado.empty:
+        doc.add_paragraph(
+            "\nNo acumulado percebemos uma grande preferência pelo regime regressivo de tributação.",
+            style='CorpoComRecuo'
+        )
+    
+    p_legenda_g5 = doc.add_paragraph("Gráfico 5. Distribuição regime de tributação (acumulado)")
+    p_legenda_g5.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    caminho_g5 = os.path.join('assets', 'grafico_tributacao_acumulado.png')
+    if criar_grafico_donut(df_tributacao_acumulado, caminho_g5, "Regime de Tributação (Acumulado)"):
+        doc.add_picture(caminho_g5, width=Inches(5.0))
+        paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    else:
+        doc.add_paragraph("[Falha ao gerar o gráfico de tributação acumulado.]")
+    
+    doc.add_paragraph("Fonte: DISEG/GEARC")
+
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
     doc.save(nome_arquivo)
     print(f"\nRelatório '{nome_arquivo}' gerado com sucesso!")
     return nome_arquivo
+
+    
 
 def converter_docx_para_pdf(caminho_docx):
     """Converte um arquivo .docx para .pdf usando o Microsoft Word."""
