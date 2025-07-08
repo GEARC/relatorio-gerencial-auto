@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import pandas as pd # Adicione esta importação se ainda não tiver
 from config import PATH_WKHTMLTOIMAGE # Importa o caminho da configuração
+import textwrap # Importa a biblioteca para quebra de texto
 
 config = imgkit.config(wkhtmltoimage=PATH_WKHTMLTOIMAGE)
 
@@ -58,4 +59,56 @@ def criar_grafico_piramide_etaria(df, caminho_para_salvar):
     plt.savefig(caminho_para_salvar, dpi=300, bbox_inches='tight')
     plt.close(fig)
     print(f"Gráfico de pirâmide gerado: {caminho_para_salvar}")
+    return True
+
+def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico):
+    """Cria um gráfico de barras verticais com rótulos horizontais e legíveis."""
+    if df.empty:
+        print(f"DataFrame vazio, não é possível gerar o gráfico '{titulo_grafico}'.")
+        return False
+
+    labels_originais = df.iloc[:, 0]
+    valores = df.iloc[:, 1]
+    
+    total_geral = valores.sum()
+    if total_geral == 0:
+        print(f"Total de valores é zero para o gráfico '{titulo_grafico}'.")
+        return False
+    
+    # --- CORREÇÃO 1: QUEBRA DE LINHA AUTOMÁTICA NOS RÓTULOS ---
+    # Quebra o texto em múltiplas linhas se ele tiver mais de 15 caracteres
+    labels = ['\n'.join(textwrap.wrap(l, 15)) for l in labels_originais]
+    
+    plt.style.use('seaborn-v0_8-whitegrid')
+    # --- CORREÇÃO 2: AUMENTA A LARGURA DA FIGURA ---
+    fig, ax = plt.subplots(figsize=(15, 8)) # Antes era (12, 7)
+    
+    cores = ['#003366', '#d62728', '#ff7f0e', '#2ca02c', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    bars = ax.bar(labels, valores, color=cores[:len(labels)])
+    
+    for bar in bars:
+        altura = bar.get_height()
+        percentual = (altura / total_geral) * 100
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            altura,
+            f'{percentual:.2f}%;\n{int(altura)}',
+            ha='center', va='bottom', fontsize=9
+        )
+        
+    ax.set_title(titulo_grafico, fontsize=16)
+    ax.set_ylabel('Quantidade de Participantes')
+    
+    # Mantém os rótulos na horizontal (rotação 0)
+    plt.xticks(rotation=0)
+    
+    ax.spines[['top','right']].set_visible(False)
+    ax.set_ylim(top=ax.get_ylim()[1] * 1.20)
+    
+    # Ajusta o layout para garantir que os rótulos não sejam cortados
+    fig.tight_layout()
+    
+    plt.savefig(caminho_para_salvar, dpi=300) # bbox_inches='tight' removido em favor de tight_layout()
+    plt.close(fig)
+    print(f"Gráfico de barras gerado: {caminho_para_salvar}")
     return True

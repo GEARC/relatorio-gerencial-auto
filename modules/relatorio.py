@@ -10,7 +10,9 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # Importa as funções dos outros módulos que serão usadas aqui
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria
+from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais
 from modules.processamento import transformar_dados_evolucao
+
 
 def garantir_estilos(doc):
     """Verifica e formata os estilos essenciais do documento."""
@@ -171,7 +173,7 @@ def gerar_relatorio_word(dados, data_alvo):
     
     if df_cargos is not None and not df_cargos.empty:
         if gerar_imagem_tabela(df_cargos, caminho_imagem_tabela_cargos):
-            doc.add_picture(caminho_imagem_tabela_cargos, width=Inches(4.2))
+            doc.add_picture(caminho_imagem_tabela_cargos, width=Inches(4.0))
             paragrafo_imagem = doc.paragraphs[-1]
             paragrafo_imagem.alignment = WD_ALIGN_PARAGRAPH.CENTER
             paragrafo_imagem.paragraph_format.space_before = Pt(0)
@@ -180,6 +182,42 @@ def gerar_relatorio_word(dados, data_alvo):
         
     p_fonte_t2 = doc.add_paragraph("Fonte: DISEG/GEARC")
     p_fonte_t2.paragraph_format.space_before = Pt(6)
+
+    # --- ADICIONA A NOVA SEÇÃO 2.4 (era 2.5 no doc original) ---
+    contador_titulo3 += 1 # Incrementa para o próximo número de seção
+    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Adesão por Ramo da Justiça", style='Título 3')
+
+    # Texto dinâmico
+    df_adesao_mes = dados.get('adesao_ramo_mes')
+    df_adesao_acumulado = dados.get('adesao_ramo_acumulado')
+
+    if df_adesao_mes is not None and not df_adesao_mes.empty:
+        ramo_maior_adesao = df_adesao_mes.iloc[0, 0]
+        numero_maior_adesao = int(df_adesao_mes.iloc[0, 1])
+        ramo_maior_total = df_adesao_acumulado.iloc[0, 0]
+        numero_maior_total = int(df_adesao_acumulado.iloc[0, 1])
+
+        doc.add_paragraph(
+            f"No mês de {data_alvo.strftime('%B/%Y')}, a {ramo_maior_adesao} obteve o maior número de adesões ({numero_maior_adesao}) e, desde o "
+            f"início do funcionamento da Funpresp-Jud, a {ramo_maior_total} permanece com o maior número de participantes ({numero_maior_total}).",
+            style='CorpoComRecuo'
+        )
+
+    # Gráfico 2: Mensal
+    p_legenda_g2 = doc.add_paragraph(f"Gráfico 2. Distribuição de participantes por ramo da justiça ({data_alvo.strftime('%B/%Y')})")
+    p_legenda_g2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    caminho_g2 = os.path.join('assets', 'grafico_adesao_mes.png')
+    if criar_grafico_barras_verticais(df_adesao_mes, caminho_g2, "Adesões no Mês por Ramo"):
+        doc.add_picture(caminho_g2, width=Inches(6.2))
+    doc.add_paragraph("Fonte: DISEG/GEARC")
+
+    # Gráfico 3: Acumulado
+    p_legenda_g3 = doc.add_paragraph("Gráfico 3. Distribuição de participantes por ramo da justiça (acumulado)")
+    p_legenda_g3.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    caminho_g3 = os.path.join('assets', 'grafico_adesao_acumulado.png')
+    if criar_grafico_barras_verticais(df_adesao_acumulado, caminho_g3, "Total de Participantes por Ramo"):
+        doc.add_picture(caminho_g3, width=Inches(6.2))
+    doc.add_paragraph("Fonte: DISEG/GEARC")
 
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
     doc.save(nome_arquivo)

@@ -15,6 +15,8 @@ from queries.tabela1_evolucao_adesoes import gerar_query as gerar_query_evolucao
 from queries.tabela2_distribuicao_sexo import QUERY as query_distribuicao_sexo
 from queries.tabela3_distribuicao_cargos import QUERY as query_distribuicao_cargos
 from queries.grafico1_piramide_etaria import QUERY as query_piramide_etaria
+from queries.grafico2_adesao_ramo_mes import gerar_query as gerar_query_g2_ramo_mes
+from queries.grafico3_adesao_ramo_acumulado import gerar_query as gerar_query_g3_ramo_acumulado
 
 def solicitar_data_relatorio():
     """Solicita ao usuário o ano e o mês para o relatório."""
@@ -48,6 +50,10 @@ def main():
     if engine is None: return
 
     dados_relatorio = {}
+
+    params_ano_mes_int = [ano_alvo, mes_alvo]
+    param_texto_data = f"{ano_alvo}{mes_alvo:02d}"
+    params_texto = [param_texto_data]
     
     # --- LÓGICA DE QUERY DINÂMICA UNIFICADA ---
     # Para todas as queries, vamos construir a string completa em Python.
@@ -75,6 +81,14 @@ def main():
     print("\nBuscando dados para Distribuição por Cargos...")
     query_cargos_dinamica = query_distribuicao_cargos.replace('?', f"'{param_texto_data}'")
     dados_relatorio['distribuicao_cargos'] = buscar_dados(query_cargos_dinamica, engine)
+
+    print("\nBuscando dados para Gráfico de Adesão Mensal por Ramo...")
+    query_g2_dinamica = gerar_query_g2_ramo_mes(ano_alvo, mes_alvo)
+    dados_relatorio['adesao_ramo_mes'] = buscar_dados(query_g2_dinamica, engine)
+    
+    print("\nBuscando dados para Gráfico de Adesão Acumulada por Ramo...")
+    query_g3_dinamica = gerar_query_g3_ramo_acumulado(ano_alvo, mes_alvo)
+    dados_relatorio['adesao_ramo_acumulado'] = buscar_dados(query_g3_dinamica, engine)
     
     # --- Geração dos arquivos ---
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)
