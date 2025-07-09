@@ -15,7 +15,32 @@ def gerar_imagem_tabela(df, nome_arquivo_saida):
         print(f"DataFrame vazio, não foi possível gerar a imagem {nome_arquivo_saida}.")
         return False
     html_tabela = df.to_html(index=False, border=0)
-    css_estilo = """<style>@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');body{font-family:'Open Sans',sans-serif;font-size:14px;}table{border-collapse:collapse;width:100%;color:#333;}th,td{border:1px solid #E0E0E0;text-align:center;padding:8px;vertical-align:middle;font-size:14px;}th{background-color:#0F406D;color:white;font-weight:bold;font-size:15px;}td:first-child{text-align:left;}tr{background-color:white;}</style>"""
+    css_estilo = """
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
+        body { font-family: 'Open Sans', sans-serif; font-size: 14px; }
+        table { border-collapse: collapse; width: 100%; color: #333; }
+        th, td {
+            border: 1px solid #E0E0E0;
+            text-align: center;
+            padding: 8px;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+        th {
+            background-color: #0F406D;
+            color: white;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        td:first-child { text-align: left; }
+        tr { background-color: white; }
+        /* CORREÇÃO: Nova regra para deixar a última linha da tabela em negrito */
+        tr:last-child {
+            font-weight: bold;
+        }
+    </style>
+    """
     html_completo = f"<!DOCTYPE html><html><head><meta charset='UTF-8'>{css_estilo}</head><body>{html_tabela}</body></html>"
     options = {'--enable-local-file-access': None, 'quality': '100', 'width': 600, 'encoding': "UTF-8", 'zoom': 1.0}
     try:

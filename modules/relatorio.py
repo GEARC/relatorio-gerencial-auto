@@ -12,10 +12,8 @@ from docx.oxml import parse_xml
 from docx.shared import RGBColor
 
 # Importa as funções dos outros módulos que serão usadas aqui
-from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria
-from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais
-from modules.processamento import transformar_dados_evolucao
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais, criar_grafico_donut, criar_grafico_barras_agrupadas, criar_grafico_paridade
+from modules.processamento import transformar_dados_evolucao, formatar_tabela_arrecadacao
 
 def garantir_estilos(doc):
     """Verifica e formata os estilos essenciais do documento."""
@@ -504,6 +502,55 @@ def gerar_relatorio_word(dados, data_alvo):
     
     p_fonte_g8 = doc.add_paragraph("Fonte: DISEG/GEARC")
     p_fonte_g8.paragraph_format.space_before = Pt(6)
+    
+     # --- NOVA SEÇÃO 3.1: ARRECADAÇÃO DE CONTRIBUIÇÃO TOTAL ---
+    contador_titulo2 = 3 # Agora é a seção 3
+    contador_titulo3 = 1
+    doc.add_paragraph(f"\n{contador_titulo2}.1. Arrecadação de contribuição total", style='Título 3')
+    
+    # Texto 1 (estático)
+    doc.add_paragraph("Abaixo demonstramos a distribuição das contribuições que resultaram no total arrecadado para o mês, bem como a variação percentual em relação ao mês anterior:", style='CorpoComRecuo')
+
+    p_legenda_t5 = doc.add_paragraph("Tabela 5. Arrecadação por tipo de contribuição")
+    p_legenda_t5.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Pega os dados brutos e formata para exibição
+    df_arrec_raw = dados.get('arrecadacao_tipo')
+    df_arrec_formatado = formatar_tabela_arrecadacao(df_arrec_raw.copy(), data_alvo)
+    
+    caminho_t5 = os.path.join('assets', 'tabela_arrecadacao_tipo.png')
+    if gerar_imagem_tabela(df_arrec_formatado, caminho_t5):
+        doc.add_picture(caminho_t5, width=Inches(6.2))
+        # ... (código para centralizar imagem)
+    
+    doc.add_paragraph("Fonte: DISEG/GEARC")
+
+    # Texto 2 (dinâmico)
+    df_arrec_raw = dados.get('arrecadacao_tipo')
+    if df_arrec_raw is not None and not df_arrec_raw.empty:
+        try:
+            # Pega a linha de totais para análise
+            total_row = df_arrec_raw[df_arrec_raw['Contribuicao'] == 'TOTAL'].iloc[0]
+            variacao_total = total_row['Variacao']
+            
+            # Define o texto de aumento ou queda
+            status_variacao = "um aumento" if variacao_total > 0 else "uma queda"
+            
+            # Encontra qual tipo de contribuição teve o maior impacto na mudança
+            df_tipos = df_arrec_raw[df_arrec_raw['Contribuicao'] != 'TOTAL'].copy()
+            df_tipos['dif_abs'] = abs(df_tipos['mes_atual'] - df_tipos['mes_passado'])
+            maior_impacto = df_tipos.loc[df_tipos['dif_abs'].idxmax()]
+            tipo_maior_impacto = maior_impacto['Contribuicao'].lower()
+
+            texto_dinamico2 = (
+                f"Com base na tabela acima, observa-se que o total arrecadado em {data_alvo.strftime('%B de %Y')} "
+                f"apresentou {status_variacao} de {abs(variacao_total):.2f}% em relação a { (data_alvo - pd.DateOffset(months=1)).strftime('%B de %Y')}. "
+                f"Essa variação foi impulsionada, sobretudo, pela arrecadação da contribuição {tipo_maior_impacto}."
+            )
+            doc.add_paragraph(texto_dinamico2, style='CorpoComRecuo')
+
+        except Exception as e:
+            print(f"Aviso: não foi possível gerar o texto dinâmico da Tabela 5. Erro: {e}")
 
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
     doc.save(nome_arquivo)

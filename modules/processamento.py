@@ -1,4 +1,5 @@
 import pandas as pd
+import locale
 
 def transformar_dados_evolucao(df_raw, data_alvo):
     """
@@ -52,3 +53,30 @@ def transformar_dados_evolucao(df_raw, data_alvo):
     df_formatado.loc['Acumulado Total'] = total_geral_row
     
     return df_formatado.reset_index().rename(columns={'index': 'Mês/Ano'})
+
+def formatar_tabela_arrecadacao(df, data_alvo):
+    """Formata o DataFrame da Tabela 5 para exibição."""
+    if df.empty:
+        return df
+    
+    # Pega os nomes dos meses
+    mes_atual_nome = data_alvo.strftime('%B/%Y').capitalize()
+    mes_passado_nome = (data_alvo - pd.DateOffset(months=1)).strftime('%B/%Y').capitalize()
+
+    # Renomeia as colunas
+    df = df.rename(columns={'mes_passado': mes_passado_nome, 'mes_atual': mes_atual_nome})
+
+    # Formata as colunas de moeda
+    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+    df[mes_passado_nome] = df[mes_passado_nome].apply(lambda x: locale.currency(x, grouping=True))
+    df[mes_atual_nome] = df[mes_atual_nome].apply(lambda x: locale.currency(x, grouping=True))
+    
+    # Formata a coluna de variação
+    df['Variacao'] = df['Variacao'].apply(lambda x: f'{x:.2f}%'.replace('.',','))
+    
+    df.rename(columns={
+        'Contribuicao': 'Contribuição', 
+        'Variacao': 'Variação'
+    }, inplace=True)
+
+    return df

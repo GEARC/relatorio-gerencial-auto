@@ -19,6 +19,7 @@ from queries.grafico2_adesao_ramo_mes import gerar_query as gerar_query_g2_ramo_
 from queries.grafico3_adesao_ramo_acumulado import gerar_query as gerar_query_g3_ramo_acumulado
 from queries.tabela3_adesoes_patrocinador import gerar_query as gerar_query_patrocinador
 from queries.tabela4_arrecadacao_mes import gerar_query as gerar_query_tabela4
+from queries.tabela5_arrecadacao_tipo import gerar_query as gerar_query_tabela5
 from queries.grafico4_tributacao_mes import gerar_query as gerar_query_g4_tributacao
 from queries.grafico5_tributacao_acumulado import gerar_query as gerar_query_g5_tributacao
 from queries.grafico6_percentual_contrib_mes import gerar_query as gerar_query_g6
@@ -124,6 +125,10 @@ def main():
     print("\nBuscando dados para o Gráfico de Paridade...")
     query_g8_dinamica = gerar_query_grafico8(ano_alvo, mes_alvo)
     dados_relatorio['arrecadacao_grafico'] = buscar_dados(query_g8_dinamica, engine)
+    
+    print("\nBuscando dados para a Tabela de Arrecadação por Tipo...")
+    query_t5_dinamica = gerar_query_tabela5(ano_alvo, mes_alvo)
+    dados_relatorio['arrecadacao_tipo'] = buscar_dados(query_t5_dinamica, engine)
     
     # --- Geração dos arquivos ---
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)
