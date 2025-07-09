@@ -174,7 +174,7 @@ def criar_grafico_donut(df, caminho_para_salvar, titulo_grafico):
             ax.text(x, y, f'{percentual:.0f}%', ha='center', va='center', color=text_color, weight='bold', size=12)
 
     ax.axis('equal')
-    ax.legend(wedges, labels_legenda, title="Regime", loc="center left", bbox_to_anchor=(1.05, 0.5), frameon=False)
+    ax.legend(wedges, labels_legenda, loc="center left", bbox_to_anchor=(1.05, 0.5), frameon=False)
     ax.set_title(titulo_grafico, fontsize=16, pad=20)
     
     plt.savefig(caminho_para_salvar, dpi=300, bbox_inches='tight')

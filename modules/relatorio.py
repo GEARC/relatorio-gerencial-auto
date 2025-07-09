@@ -289,46 +289,65 @@ def gerar_relatorio_word(dados, data_alvo):
      # --- SEÇÃO ATUALIZADA: REGIME DE TRIBUTAÇÃO ---
     contador_titulo3 += 1
     doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Regime de Tributação (Imposto de Renda)", style='Título 3')
+    
 
     # --- Gráfico 4: MENSAL ---
     df_tributacao_mes = dados.get('regime_tributacao_mes')
     if df_tributacao_mes is not None and not df_tributacao_mes.empty:
-        # Lógica para o texto dinâmico
         try:
             total_mes = df_tributacao_mes['Quantidade'].sum()
-            # Ajuste 'R' para o código real de 'Regressiva' no seu banco
-            qtd_regressiva = df_tributacao_mes[df_tributacao_mes['IC_TRIBUTACAO'] == 'R']['Quantidade'].iloc[0]
-            perc_regressiva = (qtd_regressiva / total_mes) * 100
-            doc.add_paragraph(f"Em {data_alvo.strftime('%B/%Y')}, o perfil de tributação demonstra a preferência de {perc_regressiva:.0f}% dos participantes pelo regime regressivo.", style='CorpoComRecuo')
-        except (IndexError, KeyError):
-            doc.add_paragraph(f"Opções de tributação para novas adesões em {data_alvo.strftime('%B/%Y')}.", style='CorpoComRecuo')
+            # Converte os dados para um formato fácil de buscar
+            opcoes = df_tributacao_mes.set_index('IC_TRIBUTACAO')['Quantidade']
+            
+            # Pega a quantidade de cada opção, com 0 se não existir
+            qtd_regressiva = opcoes.get('R', 0)
+            qtd_progressiva = opcoes.get('P', 0)
+            qtd_sem_opcao = opcoes.get('N', 0)
+            
+            # Calcula os percentuais
+            perc_regressiva = (qtd_regressiva / total_mes) * 100 if total_mes > 0 else 0
+            perc_progressiva = (qtd_progressiva / total_mes) * 100 if total_mes > 0 else 0
+            perc_sem_opcao = (qtd_sem_opcao / total_mes) * 100 if total_mes > 0 else 0
 
-        p_legenda_g4 = doc.add_paragraph(f"Gráfico 4. Distribuição regime de tributação ({data_alvo.strftime('%B/%Y')})")
-        p_legenda_g4.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        caminho_g4 = os.path.join('assets', 'grafico_tributacao_mes.png')
-        if criar_grafico_donut(df_tributacao_mes, caminho_g4, f"Regime de Tributação ({data_alvo.strftime('%B/%Y')})"):
-            doc.add_picture(caminho_g4, width=Inches(5.0))
-            paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    else:
-        doc.add_paragraph(f"Não houve novas adesões com opção de tributação em {mes_ano_texto}.", style='CorpoComRecuo')
+            # Monta o texto completo
+            texto_dinamico = (
+                f"Em {data_alvo.strftime('%B/%Y')}, o perfil de tributação demonstra a preferência de {perc_regressiva:.0f}% dos participantes pelo regime regressivo. "
+                f"O regime progressivo representou {perc_progressiva:.0f}% das escolhas e há {perc_sem_opcao:.0f}% dos participantes que "
+                f"ainda não fizeram a opção (Gráfico 4)."
+            )
+            doc.add_paragraph(texto_dinamico, style='CorpoComRecuo')
 
-
-    # --- Gráfico 5: ACUMULADO ---
-    df_tributacao_acumulado = dados.get('regime_tributacao_acumulado')
-    if df_tributacao_acumulado is not None and not df_tributacao_acumulado.empty:
-        doc.add_paragraph(
-            "\nNo acumulado percebemos uma grande preferência pelo regime regressivo de tributação.",
-            style='CorpoComRecuo'
-        )
+        except Exception as e:
+            print(f"Aviso: Não foi possível gerar o texto dinâmico de tributação. Erro: {e}")
     
+    # Adiciona o segundo parágrafo, que é estático
+    p_lei = doc.add_paragraph(style='CorpoComRecuo')
+    p_lei.add_run("No acumulado percebemos uma grande preferência pelo regime regressivo de tributação (Gráfico 5). Com base na ")
+    p_lei.add_run("Lei 14.803").bold = True
+    p_lei.add_run(", datada de ")
+    p_lei.add_run("10/1/2024").bold = True
+    p_lei.add_run(", houve uma importante alteração no regime de tributação para os participantes de planos de previdência complementar. Agora, ")
+    p_lei.add_run("os participantes").bold = True
+    p_lei.add_run(" têm a liberdade de escolher entre os regimes ")
+    p_lei.add_run("progressivo ou regressivo").bold = True
+    p_lei.add_run(" no momento da obtenção do benefício ou do primeiro resgate dos valores acumulados.")
+    # --- FIM DA LÓGICA DE TEXTO ---
+
+    # Gráfico 4: Mensal
+    p_legenda_g4 = doc.add_paragraph(f"Gráfico 4. Distribuição regime de tributação ({data_alvo.strftime('%B/%Y')})")
+    p_legenda_g4.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    caminho_g4 = os.path.join('assets', 'grafico_tributacao_mes.png')
+    if criar_grafico_donut(df_tributacao_mes, caminho_g4, f"Regime de Tributação ({data_alvo.strftime('%B/%Y')})"):
+        doc.add_picture(caminho_g4, width=Inches(5.0))
+        paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Gráfico 5: Acumulado
     p_legenda_g5 = doc.add_paragraph("Gráfico 5. Distribuição regime de tributação (acumulado)")
     p_legenda_g5.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_g5 = os.path.join('assets', 'grafico_tributacao_acumulado.png')
-    if criar_grafico_donut(df_tributacao_acumulado, caminho_g5, "Regime de Tributação (Acumulado)"):
+    if criar_grafico_donut(dados.get('regime_tributacao_acumulado'), caminho_g5, "Regime de Tributação (Acumulado)"):
         doc.add_picture(caminho_g5, width=Inches(5.0))
         paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    else:
-        doc.add_paragraph("[Falha ao gerar o gráfico de tributação acumulado.]")
     
     doc.add_paragraph("Fonte: DISEG/GEARC")
 
@@ -336,8 +355,6 @@ def gerar_relatorio_word(dados, data_alvo):
     doc.save(nome_arquivo)
     print(f"\nRelatório '{nome_arquivo}' gerado com sucesso!")
     return nome_arquivo
-
-    
 
 def converter_docx_para_pdf(caminho_docx):
     """Converte um arquivo .docx para .pdf usando o Microsoft Word."""
