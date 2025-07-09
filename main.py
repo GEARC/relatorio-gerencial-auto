@@ -20,6 +20,9 @@ from queries.grafico3_adesao_ramo_acumulado import gerar_query as gerar_query_g3
 from queries.tabela4_adesoes_patrocinador import gerar_query as gerar_query_patrocinador
 from queries.grafico4_tributacao_mes import gerar_query as gerar_query_g4_tributacao
 from queries.grafico5_tributacao_acumulado import gerar_query as gerar_query_g5_tributacao
+from queries.grafico6_percentual_contrib_mes import gerar_query as gerar_query_g6
+from queries.grafico7_percentual_contrib_acumulado import gerar_query as gerar_query_g7
+
 
 def solicitar_data_relatorio():
     """Solicita ao usuário o ano e o mês para o relatório."""
@@ -104,6 +107,14 @@ def main():
     print("\nBuscando dados para o Gráfico de Regime de Tributação...")
     query_g5_dinamica = gerar_query_g5_tributacao(ano_alvo, mes_alvo)
     dados_relatorio['regime_tributacao_acumulado'] = buscar_dados(query_g5_dinamica, engine)
+
+    print("\nBuscando dados para o Gráfico Mensal de Percentual de Contribuição...")
+    query_g6_dinamica = gerar_query_g6(ano_alvo, mes_alvo)
+    dados_relatorio['percentual_contrib_mes'] = buscar_dados(query_g6_dinamica, engine)
+    
+    print("\nBuscando dados para o Gráfico Acumulado de Percentual de Contribuição...")
+    query_g7_dinamica = gerar_query_g7(ano_alvo, mes_alvo)
+    dados_relatorio['percentual_contrib_acumulado'] = buscar_dados(query_g7_dinamica, engine)
     
     # --- Geração dos arquivos ---
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)

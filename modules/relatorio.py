@@ -15,7 +15,7 @@ from docx.shared import RGBColor
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais
 from modules.processamento import transformar_dados_evolucao
-from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais, criar_grafico_donut
+from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais, criar_grafico_donut, criar_grafico_barras_agrupadas
 
 def garantir_estilos(doc):
     """Verifica e formata os estilos essenciais do documento."""
@@ -349,6 +349,92 @@ def gerar_relatorio_word(dados, data_alvo):
         doc.add_picture(caminho_g5, width=Inches(5.0))
         paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
+    doc.add_paragraph("Fonte: DISEG/GEARC")
+
+    # --- NOVA SEÇÃO 2.8: PERCENTUAL DE CONTRIBUIÇÃO ---
+    contador_titulo3 += 1 # Incrementa o contador para a nova seção
+    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Percentual de Contribuição", style='Título 3')
+
+    # Parágrafo 1 (estático)
+    doc.add_paragraph(
+        "Um bom sinal da qualidade da opção dos participantes é relacionado ao percentual escolhido. "
+        "Segregando as categorias de participantes vinculados e patrocinados percebemos a opção oposta "
+        "em relação à escolha do percentual de contribuição mensal.",
+        style='CorpoComRecuo'
+    )
+
+    # --- Lógica para os parágrafos dinâmicos ---
+    df_mes = dados.get('percentual_contrib_mes')
+    df_acumulado = dados.get('percentual_contrib_acumulado')
+
+    if df_mes is not None and df_acumulado is not None and not df_mes.empty and not df_acumulado.empty:
+        try:
+            # --- Cálculos para o texto ---
+            # Assegura que a coluna de percentual seja numérica
+            df_mes['PERCENTUAL'] = pd.to_numeric(df_mes['PERCENTUAL'])
+            df_acumulado['PERCENTUAL'] = pd.to_numeric(df_acumulado['PERCENTUAL'])
+
+            # Dados Mensais
+            df_mes_vinc = df_mes[df_mes['NM_SITUACAO'] == 'VINCULADO']
+            total_vinc_mes = df_mes_vinc['QTD'].sum()
+            qtd_vinc_65_mes = df_mes_vinc[df_mes_vinc['PERCENTUAL'] == 6.5]['QTD'].sum()
+            perc_vinc_65_mes = (qtd_vinc_65_mes / total_vinc_mes) * 100 if total_vinc_mes > 0 else 0
+
+            df_mes_patro = df_mes[df_mes['NM_SITUACAO'] == 'PATROCINADO']
+            total_patro_mes = df_mes_patro['QTD'].sum()
+            qtd_patro_85_mes = df_mes_patro[df_mes_patro['PERCENTUAL'] == 8.5]['QTD'].sum()
+            perc_patro_85_mes = (qtd_patro_85_mes / total_patro_mes) * 100 if total_patro_mes > 0 else 0
+
+            # Dados Acumulados
+            df_acum_vinc = df_acumulado[df_acumulado['NM_SITUACAO'] == 'VINCULADO']
+            total_vinc_acum = df_acum_vinc['QTD'].sum()
+            qtd_vinc_65_acum = df_acum_vinc[df_acum_vinc['PERCENTUAL'] == 6.5]['QTD'].sum()
+            perc_vinc_65_acum = (qtd_vinc_65_acum / total_vinc_acum) * 100 if total_vinc_acum > 0 else 0
+
+            df_acum_patro = df_acumulado[df_acumulado['NM_SITUACAO'] == 'PATROCINADO']
+            total_patro_acum = df_acum_patro['QTD'].sum()
+            qtd_patro_85_acum = df_acum_patro[df_acum_patro['PERCENTUAL'] == 8.5]['QTD'].sum()
+            perc_patro_85_acum = (qtd_patro_85_acum / total_patro_acum) * 100 if total_patro_acum > 0 else 0
+
+            # Parágrafo 2 (Vinculados)
+            texto_vinculados = (
+                f"Para os participantes vinculados a melhor opção é a escolha do percentual mínimo (6,5%), "
+                f"com o objetivo de aproveitar a isenção da taxa de carregamento sobre a contribuição facultativa. "
+                f"Em {data_alvo.strftime('%B/%Y')}, {perc_vinc_65_mes:.2f}% dos participantes vinculados optaram pelo percentual de 6,5% "
+                f"e a opção pelo percentual mínimo chega a {perc_vinc_65_acum:.2f}% da preferência dos participantes "
+                f"desde o início do funcionamento do plano."
+            )
+            doc.add_paragraph(texto_vinculados, style='CorpoComRecuo')
+
+            # Parágrafo 3 (Patrocinados)
+            texto_patrocinados = (
+                f"Para os participantes patrocinados a opção mais vantajosa é contribuir com o percentual máximo (8,5%), "
+                f"obtendo a contrapartida máxima da contribuição patronal. Em {data_alvo.strftime('%B/%Y')}, "
+                f"{perc_patro_85_mes:.2f}% dos participantes optaram pelo percentual máximo. Já no acumulado, "
+                f"desde o início do plano, temos {perc_patro_85_acum:.2f}% dos participantes com o percentual de 8,5%."
+            )
+            doc.add_paragraph(texto_patrocinados, style='CorpoComRecuo')
+
+        except Exception as e:
+            print(f"Aviso: não foi possível gerar o texto dinâmico de percentuais. Erro: {e}")
+            doc.add_paragraph("[Não foi possível gerar os textos descritivos para esta seção.]", style='CorpoComRecuo')
+    else:
+        doc.add_paragraph("[Dados insuficientes para gerar os textos descritivos.]", style='CorpoComRecuo')
+
+    # Gráfico 6: Mensal
+    p_legenda_g6 = doc.add_paragraph(f"Gráfico 6. Distribuição do percentual de contribuição ({data_alvo.strftime('%B/%Y')})")
+    p_legenda_g6.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    caminho_g6 = os.path.join('assets', 'grafico_percentual_mes.png')
+    if criar_grafico_barras_agrupadas(df_mes, caminho_g6, f"Distribuição Mensal ({data_alvo.strftime('%B/%Y')})"):
+        doc.add_picture(caminho_g6, width=Inches(6.2))
+    doc.add_paragraph("Fonte: DISEG/GEARC")
+
+    # Gráfico 7: Acumulado
+    p_legenda_g7 = doc.add_paragraph("Gráfico 7. Distribuição do percentual de contribuição (acumulado)")
+    p_legenda_g7.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    caminho_g7 = os.path.join('assets', 'grafico_percentual_acumulado.png')
+    if criar_grafico_barras_agrupadas(df_acumulado, caminho_g7, "Distribuição Acumulada"):
+        doc.add_picture(caminho_g7, width=Inches(6.2))
     doc.add_paragraph("Fonte: DISEG/GEARC")
 
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"

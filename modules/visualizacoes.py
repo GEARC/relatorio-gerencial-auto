@@ -181,3 +181,47 @@ def criar_grafico_donut(df, caminho_para_salvar, titulo_grafico):
     plt.close(fig)
     print(f"Gráfico de donut gerado: {caminho_para_salvar}")
     return True
+
+def criar_grafico_barras_agrupadas(df, caminho_para_salvar, titulo):
+    """Cria um gráfico de barras agrupadas e o salva como imagem."""
+    if df.empty:
+        print(f"DataFrame vazio, não é possível gerar o gráfico '{titulo}'.")
+        return False
+
+    # Renomeia para um padrão conhecido
+    df = df.rename(columns={'NM_SITUACAO': 'Situacao', 'PERCENTUAL': 'Percentual', 'QTD': 'Qtd'})
+    
+    # Pivota os dados
+    df_pivot = df.pivot_table(index='Percentual', columns='Situacao', values='Qtd', fill_value=0)
+    
+    # Converte a contagem para percentual DENTRO de cada grupo (Vinculado, Patrocinado)
+    df_percent = df_pivot.div(df_pivot.sum(axis=0), axis=1) * 100
+    
+    # Formata o índice para ter o símbolo de %
+    df_percent.index = [f'{i:.2f}%'.replace('.',',') for i in df_percent.index]
+
+    labels = df_percent.index
+    x = np.arange(len(labels))  # Posições dos rótulos
+    width = 0.35  # Largura das barras
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+    # Plota as barras para 'PATROCINADO'
+    rects1 = ax.bar(x - width/2, df_percent.get('PATROCINADO', 0), width, label='Patrocinado', color='#0F406D')
+    # Plota as barras para 'VINCULADO'
+    rects2 = ax.bar(x + width/2, df_percent.get('VINCULADO', 0), width, label='Vinculado', color='#DD7E2E')
+
+    # Adiciona os rótulos de porcentagem
+    ax.bar_label(rects1, padding=3, fmt='%.2f%%')
+    ax.bar_label(rects2, padding=3, fmt='%.2f%%')
+
+    ax.set_ylabel('Percentual de Participantes')
+    ax.set_title(titulo, fontsize=16)
+    ax.set_xticks(x, labels)
+    ax.legend()
+    ax.yaxis.set_major_formatter(mticker.PercentFormatter())
+    ax.set_ylim(top=ax.get_ylim()[1] * 1.15)
+    fig.tight_layout()
+
+    plt.savefig(caminho_para_salvar, dpi=300)
+    plt.close(fig)
+    return True
