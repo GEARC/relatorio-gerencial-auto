@@ -12,17 +12,18 @@ from config import DB_CONFIG
 from modules.relatorio import gerar_relatorio_word, converter_docx_para_pdf
 from modules.database import conectar_banco, buscar_dados
 from queries.tabela1_evolucao_adesoes import gerar_query as gerar_query_evolucao
-from queries.tabela2_distribuicao_sexo import QUERY as query_distribuicao_sexo
-from queries.tabela3_distribuicao_cargos import QUERY as query_distribuicao_cargos
+from queries.tabela_distribuicao_sexo import QUERY as query_distribuicao_sexo
+from queries.tabela2_distribuicao_cargos import QUERY as query_distribuicao_cargos
 from queries.grafico1_piramide_etaria import QUERY as query_piramide_etaria
 from queries.grafico2_adesao_ramo_mes import gerar_query as gerar_query_g2_ramo_mes
 from queries.grafico3_adesao_ramo_acumulado import gerar_query as gerar_query_g3_ramo_acumulado
-from queries.tabela4_adesoes_patrocinador import gerar_query as gerar_query_patrocinador
+from queries.tabela3_adesoes_patrocinador import gerar_query as gerar_query_patrocinador
+from queries.tabela4_arrecadacao_mes import gerar_query as gerar_query_tabela4
 from queries.grafico4_tributacao_mes import gerar_query as gerar_query_g4_tributacao
 from queries.grafico5_tributacao_acumulado import gerar_query as gerar_query_g5_tributacao
 from queries.grafico6_percentual_contrib_mes import gerar_query as gerar_query_g6
 from queries.grafico7_percentual_contrib_acumulado import gerar_query as gerar_query_g7
-
+from queries.grafico8_contribuicao_paridade import gerar_query as gerar_query_grafico8
 
 def solicitar_data_relatorio():
     """Solicita ao usuário o ano e o mês para o relatório."""
@@ -115,6 +116,14 @@ def main():
     print("\nBuscando dados para o Gráfico Acumulado de Percentual de Contribuição...")
     query_g7_dinamica = gerar_query_g7(ano_alvo, mes_alvo)
     dados_relatorio['percentual_contrib_acumulado'] = buscar_dados(query_g7_dinamica, engine)
+
+    print("\nBuscando dados para a Tabela de Arrecadação...")
+    query_t4_dinamica = gerar_query_tabela4(ano_alvo, mes_alvo)
+    dados_relatorio['arrecadacao_tabela'] = buscar_dados(query_t4_dinamica, engine)
+
+    print("\nBuscando dados para o Gráfico de Paridade...")
+    query_g8_dinamica = gerar_query_grafico8(ano_alvo, mes_alvo)
+    dados_relatorio['arrecadacao_grafico'] = buscar_dados(query_g8_dinamica, engine)
     
     # --- Geração dos arquivos ---
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)

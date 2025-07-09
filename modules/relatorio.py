@@ -437,6 +437,51 @@ def gerar_relatorio_word(dados, data_alvo):
         doc.add_picture(caminho_g7, width=Inches(6.2))
     doc.add_paragraph("Fonte: DISEG/GEARC")
 
+      # --- NOVA SEÇÃO 3: ARRECADAÇÃO ---
+    contador_titulo2 += 1
+    doc.add_paragraph(f'\n{contador_titulo2}. Arrecadação', style='Título 2')
+    
+    # --- Lógica do Texto e Tabela 4 ---
+    df_arrec_tabela = dados.get('arrecadacao_tabela')
+    if df_arrec_tabela is not None and not df_arrec_tabela.empty:
+        try:
+            # Pega o valor da primeira linha (mês atual) e segunda (outras)
+            valor_mes_atual = df_arrec_tabela.iloc[0, 1]
+            valor_outras = df_arrec_tabela.iloc[1, 1]
+            doc.add_paragraph(
+                f"A arrecadação das contribuições no mês de {data_alvo.strftime('%B/%Y')} atingiu o valor de R$ {valor_mes_atual / 1_000_000:.1f} milhões. "
+                f"Foram arrecadados aproximadamente R$ {valor_outras / 1_000_000:.1f} milhões referente a contribuições de outras competências.",
+                style='CorpoComRecuo'
+            )
+            # Formata a coluna de contribuição como moeda
+            df_arrec_tabela['CONTRIBUIÇÃO'] = df_arrec_tabela['CONTRIBUIÇÃO'].apply(lambda x: f'R$ {x:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.'))
+        except Exception as e:
+            print(f"Aviso: Não foi possível gerar texto dinâmico de arrecadação. Erro: {e}")
+
+    p_legenda_t4 = doc.add_paragraph("Tabela 4. Arrecadação de contribuições por mês competência")
+    p_legenda_t4.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    caminho_t4 = os.path.join('assets', 'tabela_arrecadacao.png')
+    if gerar_imagem_tabela(df_arrec_tabela, caminho_t4):
+        doc.add_picture(caminho_t4, width=Inches(4.0))
+        doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph("Fonte: DISEG/GEARC")
+
+    # --- Lógica do Texto e Gráfico 8 ---
+    df_arrec_grafico = dados.get('arrecadacao_grafico')
+    # ... (lógica do texto dinâmico da paridade) ...
+    
+    p_legenda_g8 = doc.add_paragraph("Gráfico 8. Contribuição normal (participante e patrocinador)")
+    p_legenda_g8.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    caminho_g8 = os.path.join('assets', 'grafico_paridade.png')
+    
+    if criar_grafico_barras_verticais(df_arrec_grafico, caminho_g8, "Paridade de Contribuição"):
+        doc.add_picture(caminho_g8, width=Inches(5.0))
+        # --- CORREÇÃO: Centraliza o parágrafo que contém a imagem do gráfico ---
+        paragrafo_grafico = doc.paragraphs[-1]
+        paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+    doc.add_paragraph("Fonte: DISEG/GEARC")
+
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
     doc.save(nome_arquivo)
     print(f"\nRelatório '{nome_arquivo}' gerado com sucesso!")
