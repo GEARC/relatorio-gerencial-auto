@@ -225,3 +225,42 @@ def criar_grafico_barras_agrupadas(df, caminho_para_salvar, titulo):
     plt.savefig(caminho_para_salvar, dpi=300)
     plt.close(fig)
     return True
+
+def criar_grafico_paridade(df, caminho_para_salvar, titulo_grafico):
+    """Cria o Gráfico 8 de paridade com formatação específica e fontes maiores."""
+    if df.empty:
+        print(f"DataFrame vazio, não é possível gerar o gráfico '{titulo_grafico}'.")
+        return False
+
+    categorias = df.iloc[:, 0]
+    valores = pd.to_numeric(df.iloc[:, 1])
+    
+    plt.style.use('seaborn-v0_8-whitegrid')
+    fig, ax = plt.subplots(figsize=(8, 6)) # Tamanho ajustado
+    
+    # Cores para participante (laranja) e patrocinador (azul escuro)
+    cores = ['#DD7E2E', '#0F406D']
+    bars = ax.bar(categorias, valores, color=cores)
+    
+    # --- CORREÇÃO: Formatação dos rótulos como moeda e com fonte maior ---
+    ax.bar_label(
+        bars, 
+        padding=3, 
+        fmt='R$ {:_> #,.2f}', # Formato de moeda BRL
+        fontsize=11 
+    )
+    
+    # Remove o eixo Y, pois os valores já estão nas barras
+    ax.get_yaxis().set_visible(False)
+    ax.spines[['top','right', 'left']].set_visible(False)
+    
+    # --- CORREÇÃO: Aumenta o tamanho da fonte do eixo X ---
+    plt.xticks(fontsize=12)
+    
+    # Aumenta o limite superior para os rótulos caberem bem
+    ax.set_ylim(top=ax.get_ylim()[1] * 1.1)
+
+    plt.savefig(caminho_para_salvar, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Gráfico de paridade gerado: {caminho_para_salvar}")
+    return True

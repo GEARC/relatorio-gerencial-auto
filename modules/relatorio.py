@@ -15,7 +15,7 @@ from docx.shared import RGBColor
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais
 from modules.processamento import transformar_dados_evolucao
-from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais, criar_grafico_donut, criar_grafico_barras_agrupadas
+from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais, criar_grafico_donut, criar_grafico_barras_agrupadas, criar_grafico_paridade
 
 def garantir_estilos(doc):
     """Verifica e formata os estilos essenciais do documento."""
@@ -468,19 +468,42 @@ def gerar_relatorio_word(dados, data_alvo):
 
     # --- Lógica do Texto e Gráfico 8 ---
     df_arrec_grafico = dados.get('arrecadacao_grafico')
-    # ... (lógica do texto dinâmico da paridade) ...
     
-    p_legenda_g8 = doc.add_paragraph("Gráfico 8. Contribuição normal (participante e patrocinador)")
+    # --- CORREÇÃO: Adiciona o texto dinâmico ---
+    if df_arrec_grafico is not None and not df_arrec_grafico.empty:
+        try:
+            # Extrai valores para o texto
+            s_paridade = df_arrec_grafico.set_index('Categoria')['Valor']
+            contrib_participante = s_paridade.get('PARTICIPANTE', 0)
+            contrib_patrocinador = s_paridade.get('PATROCINADOR', 0)
+            diferenca = abs(contrib_participante - contrib_patrocinador)
+            
+            # Formata o valor da diferença como moeda brasileira
+            diferenca_formatada = f"R$ {diferenca:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            
+            p_paridade = doc.add_paragraph(style='CorpoComRecuo')
+            p_paridade.add_run("Verificamos a paridade das contribuições entre participante e patrocinador, identificando uma diferença de ")
+            p_paridade.add_run(diferenca_formatada).bold = True
+            p_paridade.add_run(". Grande parte desse valor se deve ao repasse realizado por um dos órgãos apenas da contribuição dos participantes, sem o correspondente aporte do patrocinador.")
+
+        except Exception as e:
+            print(f"Aviso: Não foi possível gerar texto dinâmico de paridade. Erro: {e}")
+
+    p_legenda_g8 = doc.add_paragraph("\nGráfico 8. Contribuição normal (participante e patrocinador)")
     p_legenda_g8.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_legenda_g8.paragraph_format.space_after = Pt(6)
+
     caminho_g8 = os.path.join('assets', 'grafico_paridade.png')
     
-    if criar_grafico_barras_verticais(df_arrec_grafico, caminho_g8, "Paridade de Contribuição"):
+    # --- CORREÇÃO: Chama a nova função de gráfico dedicada ---
+    if criar_grafico_paridade(df_arrec_grafico, caminho_g8, "Paridade de Contribuição"):
         doc.add_picture(caminho_g8, width=Inches(5.0))
-        # --- CORREÇÃO: Centraliza o parágrafo que contém a imagem do gráfico ---
         paragrafo_grafico = doc.paragraphs[-1]
         paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
-    doc.add_paragraph("Fonte: DISEG/GEARC")
+        paragrafo_grafico.paragraph_format.space_before = Pt(0)
+    
+    p_fonte_g8 = doc.add_paragraph("Fonte: DISEG/GEARC")
+    p_fonte_g8.paragraph_format.space_before = Pt(6)
 
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
     doc.save(nome_arquivo)
