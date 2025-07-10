@@ -80,3 +80,42 @@ def formatar_tabela_arrecadacao(df, data_alvo):
     }, inplace=True)
 
     return df
+
+def formatar_tabela_cargo(df):
+    """Formata o DataFrame da Tabela 6 para exibição, usando nomes de colunas simples."""
+    if df.empty:
+        return df
+    
+    # Adiciona a linha de Total Geral ANTES de formatar, usando os dados brutos
+    total_contribuicao_geral = df['TotalContribuicao'].sum()
+    total_participantes_geral = df['QuantidadeParticipantes'].sum()
+    
+    total_row = pd.DataFrame([{
+        'CARGO': 'Total geral',
+        'RepresentatividadeContribuicao': '',
+        'ContribuicaoMedia': '',
+        'QuantidadeParticipantes': '',
+        'RepresentatividadeParticipantes': '',
+        'TotalContribuicao': total_contribuicao_geral
+    }])
+    
+    df_com_total = pd.concat([df, total_row], ignore_index=True)
+
+    # Formata as colunas
+    df_com_total['RepresentatividadeContribuicao'] = df_com_total['RepresentatividadeContribuicao'].apply(lambda x: f'{x:.1f}%'.replace('.',',') if isinstance(x, (int, float)) else x)
+    df_com_total['ContribuicaoMedia'] = df_com_total['ContribuicaoMedia'].apply(lambda x: locale.currency(x, grouping=True) if isinstance(x, (int, float)) else x)
+    df_com_total['QuantidadeParticipantes'] = df_com_total['QuantidadeParticipantes'].apply(lambda x: f'{x:,.0f}'.replace(',','.') if isinstance(x, (int, float)) else x)
+    df_com_total['RepresentatividadeParticipantes'] = df_com_total['RepresentatividadeParticipantes'].apply(lambda x: f'{x:.1f}%'.replace('.',',') if isinstance(x, (int, float)) else x)
+    df_com_total['TotalContribuicao'] = df_com_total['TotalContribuicao'].apply(lambda x: locale.currency(x, grouping=True) if isinstance(x, (int, float)) else x)
+
+    # Renomeia as colunas para a versão final, com acentos
+    df_com_total.rename(columns={
+        'CARGO': 'CARGO',
+        'RepresentatividadeContribuicao': 'REPRESENTATIVIDADE DA CONTRIBUIÇÃO',
+        'ContribuicaoMedia': 'CONTRIBUIÇÃO MÉDIA',
+        'QuantidadeParticipantes': 'QUANTIDADE DE PARTICIPANTES',
+        'RepresentatividadeParticipantes': 'REPRESENTATIVIDADE DOS PARTICIPANTES',
+        'TotalContribuicao': 'TOTAL CONTRIBUIÇÃO'
+    }, inplace=True)
+    
+    return df_com_total.fillna('')

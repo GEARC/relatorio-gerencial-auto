@@ -6,8 +6,6 @@ import locale
 import os
 import win32com.client
 import pythoncom
-
-# --- Módulos do projeto ---
 from config import DB_CONFIG
 from modules.relatorio import gerar_relatorio_word, converter_docx_para_pdf
 from modules.database import conectar_banco, buscar_dados
@@ -25,6 +23,8 @@ from queries.grafico5_tributacao_acumulado import gerar_query as gerar_query_g5_
 from queries.grafico6_percentual_contrib_mes import gerar_query as gerar_query_g6
 from queries.grafico7_percentual_contrib_acumulado import gerar_query as gerar_query_g7
 from queries.grafico8_contribuicao_paridade import gerar_query as gerar_query_grafico8
+from queries.tabela6_arrecadacao_cargo import gerar_query as gerar_query_tabela6
+from queries.grafico9_contribuicao_ramo_mes import gerar_query as gerar_query_g9
 
 def solicitar_data_relatorio():
     """Solicita ao usuário o ano e o mês para o relatório."""
@@ -63,29 +63,21 @@ def main():
     param_texto_data = f"{ano_alvo}{mes_alvo:02d}"
     params_texto = [param_texto_data]
     
-    # --- LÓGICA DE QUERY DINÂMICA UNIFICADA ---
-    # Para todas as queries, vamos construir a string completa em Python.
-    
-    # 1. Gerar query de Evolução (método já estava correto)
+
     print("\nBuscando dados para Evolução das Adesões...")
     query_evolucao_dinamica = gerar_query_evolucao(ano_alvo, mes_alvo)
     dados_relatorio['evolucao_adesoes'] = buscar_dados(query_evolucao_dinamica, engine)
     
-    # 2. Gerar as outras queries dinamicamente, substituindo o '?'
     param_texto_data = f"{ano_alvo}{mes_alvo:02d}"
     
     print("\nBuscando dados para Distribuição por Sexo...")
-    # Substitui o '?' na query pelo texto da data, que já está entre aspas
     query_sexo_dinamica = query_distribuicao_sexo.replace('?', f"'{param_texto_data}'")
-    # Executa a query completa, sem enviar 'params'
     dados_relatorio['distribuicao_sexo'] = buscar_dados(query_sexo_dinamica, engine)
     
     print("\nBuscando dados para o Gráfico de Pirâmide Etária...")
-    # Faz o mesmo para a outra consulta
     query_piramide_dinamica = query_piramide_etaria.replace('?', f"'{param_texto_data}'")
     dados_relatorio['piramide_etaria'] = buscar_dados(query_piramide_dinamica, engine)
 
-      # --- 2. EXECUTA A NOVA QUERY ---
     print("\nBuscando dados para Distribuição por Cargos...")
     query_cargos_dinamica = query_distribuicao_cargos.replace('?', f"'{param_texto_data}'")
     dados_relatorio['distribuicao_cargos'] = buscar_dados(query_cargos_dinamica, engine)
@@ -129,8 +121,15 @@ def main():
     print("\nBuscando dados para a Tabela de Arrecadação por Tipo...")
     query_t5_dinamica = gerar_query_tabela5(ano_alvo, mes_alvo)
     dados_relatorio['arrecadacao_tipo'] = buscar_dados(query_t5_dinamica, engine)
+
+    print("\nBuscando dados para a Tabela de Arrecadação por Cargo...")
+    query_t6_dinamica = gerar_query_tabela6(ano_alvo, mes_alvo)
+    dados_relatorio['arrecadacao_cargo'] = buscar_dados(query_t6_dinamica, engine)
+
+    print("\nBuscando dados para o Gráfico de Contribuição Mensal por Ramo...")
+    query_g9_dinamica = gerar_query_g9(ano_alvo, mes_alvo)
+    dados_relatorio['contribuicao_ramo_mes'] = buscar_dados(query_g9_dinamica, engine)
     
-    # --- Geração dos arquivos ---
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)
     
     if nome_arquivo_docx:

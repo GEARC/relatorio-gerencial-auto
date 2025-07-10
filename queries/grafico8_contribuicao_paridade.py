@@ -1,5 +1,3 @@
-# queries/grafico8_contribuicao_paridade.py
-
 def gerar_query(ano, mes):
     """
     Gera a query completa e dinâmica para o Gráfico 8 (Paridade de Contribuição),

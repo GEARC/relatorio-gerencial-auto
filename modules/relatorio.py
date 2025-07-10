@@ -13,7 +13,7 @@ from docx.shared import RGBColor
 
 # Importa as funções dos outros módulos que serão usadas aqui
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais, criar_grafico_donut, criar_grafico_barras_agrupadas, criar_grafico_paridade
-from modules.processamento import transformar_dados_evolucao, formatar_tabela_arrecadacao
+from modules.processamento import transformar_dados_evolucao, formatar_tabela_arrecadacao, formatar_tabela_cargo
 
 def garantir_estilos(doc):
     """Verifica e formata os estilos essenciais do documento."""
@@ -551,6 +551,80 @@ def gerar_relatorio_word(dados, data_alvo):
 
         except Exception as e:
             print(f"Aviso: não foi possível gerar o texto dinâmico da Tabela 5. Erro: {e}")
+
+    contador_titulo2 = 3 # Agora é a seção 3
+    contador_titulo3 += 1
+        # --- NOVA SEÇÃO 3.2: ARRECADAÇÃO POR CARGO ---
+    """Adiciona a seção 3.2 de Arrecadação por Cargo."""
+    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3} Arrecadação de contribuições por cargo", style='Título 3')
+
+    df_cargo_raw = dados.get('arrecadacao_cargo')
+    
+    if df_cargo_raw is not None and not df_cargo_raw.empty:
+        try:
+            # --- CORREÇÃO APLICADA AQUI ---
+            # Ordena os dados usando o nome da coluna sem acento ('ContribuicaoMedia')
+            df_ordenado = df_cargo_raw.sort_values(by='ContribuicaoMedia', ascending=False)
+            
+            # Extrai os valores para o texto dinâmico (exemplo)
+            juizes_media = df_ordenado[df_ordenado['CARGO'] == 'JUÍZES E MEMBROS']['ContribuicaoMedia'].iloc[0]
+            analistas_media = df_ordenado[df_ordenado['CARGO'] == 'ANALISTAS']['ContribuicaoMedia'].iloc[0]
+            
+            # Constrói o texto dinâmico (exemplo)
+            texto_p1 = doc.add_paragraph(style='CorpoComRecuo')
+            texto_p1.add_run("Analisando a contribuição média dos participantes patrocinados, observa-se que os Juízes e Membros ocupam a primeira posição, com um valor médio de ")
+            texto_p1.add_run(f"{locale.currency(juizes_media, grouping=True)}").bold = True
+            texto_p1.add_run(", seguidos pelos Analistas, com ")
+            texto_p1.add_run(f"{locale.currency(analistas_media, grouping=True)}.").bold = True
+            
+            # Adiciona os outros parágrafos
+            doc.add_paragraph("Ressalta-se que o cenário apresentado considera apenas as contribuições normais, referentes ao mês corrente e às competências anteriores, tanto dos participantes quanto dos patrocinadores.", style='CorpoComRecuo')
+            doc.add_paragraph("O detalhamento da arrecadação, bem como a quantidade de participantes por cargo, pode ser visualizado na Tabela 6.", style='CorpoComRecuo')
+
+            # Gera a imagem da tabela
+            p_legenda_t6 = doc.add_paragraph("Tabela 6. Arrecadação por cargo/representatividade (participantes patrocinados)")
+            p_legenda_t6.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Chama a função de formatação
+            df_cargo_formatado = formatar_tabela_cargo(df_cargo_raw.copy())
+            caminho_t6 = os.path.join('assets', 'tabela_arrecadacao_cargo.png')
+            
+            if gerar_imagem_tabela(df_cargo_formatado, caminho_t6):
+                doc.add_picture(caminho_t6, width=Inches(6.2))
+                doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            doc.add_paragraph("Fonte: DISEG/GEARC")
+
+        except Exception as e:
+            print(f"Aviso: não foi possível gerar a seção de arrecadação por cargo. Erro: {e}")
+
+     # --- NOVA SEÇÃO 3.3: CONTRIBUIÇÕES POR RAMO DA JUSTIÇA ---
+    contador_titulo3 += 1 # Incrementa para o próximo número
+    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Contribuições por ramo da justiça", style='Título 3')
+
+    # Lógica para o texto dinâmico
+    df_contrib_ramo_mes = dados.get('contribuicao_ramo_mes')
+    if df_contrib_ramo_mes is not None and not df_contrib_ramo_mes.empty:
+        # A query já ordena por valor, então o primeiro da lista é o maior
+        ramo_maior_volume = df_contrib_ramo_mes.iloc[0, 0]
+        
+        texto_dinamico = (
+            f"Em {data_alvo.strftime('%B/%Y')} a {ramo_maior_volume} teve o maior volume de contribuições. "
+            "Desde o início do plano, temos a Justiça Trabalhista com maior patrimônio acumulado."
+        )
+        doc.add_paragraph(texto_dinamico, style='CorpoComRecuo')
+    
+    # Gráfico 9: Mensal
+    p_legenda_g9 = doc.add_paragraph(f"Gráfico 9. Distribuição de contribuições por ramo do patrocinador ({data_alvo.strftime('%B/%Y')})")
+    p_legenda_g9.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    caminho_g9 = os.path.join('assets', 'grafico_contribuicao_ramo_mes.png')
+    
+    # Reutilizando nossa função de gráfico de barras!
+    if criar_grafico_barras_verticais(df_contrib_ramo_mes, caminho_g9, "Contribuição Mensal por Ramo", formato_label='percent_only'):
+        doc.add_picture(caminho_g9, width=Inches(6.2))
+        doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+    doc.add_paragraph("Fonte: DISEG/GEARC")
 
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
     doc.save(nome_arquivo)

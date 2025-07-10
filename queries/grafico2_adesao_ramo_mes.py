@@ -1,4 +1,3 @@
-# queries/grafico2_adesao_ramo_mes.py
 import datetime
 from dateutil.relativedelta import relativedelta
 

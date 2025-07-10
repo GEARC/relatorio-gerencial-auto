@@ -88,7 +88,7 @@ def criar_grafico_piramide_etaria(df, caminho_para_salvar):
     print(f"Gráfico de pirâmide gerado: {caminho_para_salvar}")
     return True
 
-def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico):
+def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico, formato_label='default'):
     """Cria um gráfico de barras verticais com rótulos horizontais e legíveis."""
     if df.empty:
         print(f"DataFrame vazio, não é possível gerar o gráfico '{titulo_grafico}'.")
@@ -116,14 +116,21 @@ def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico):
     for bar in bars:
         altura = bar.get_height()
         percentual = (altura / total_geral) * 100
+        
+        # Define o texto do rótulo com base no parâmetro
+        if formato_label == 'percent_only':
+            texto_rotulo = f'{percentual:.2f}%'.replace('.', ',')
+        else: # Padrão: mostra percentual e valor absoluto
+            texto_rotulo = f'{percentual:.2f}%\n{int(altura)}'.replace('.', ',')
+            
         ax.text(
             bar.get_x() + bar.get_width() / 2,
             altura,
-            f'{percentual:.2f}%;\n{int(altura)}',
-            ha='center', va='bottom', fontsize=9
+            texto_rotulo,
+            ha='center', va='bottom', fontsize=19
         )
-        
-    ax.set_title(titulo_grafico, fontsize=16)
+
+    ax.set_title(titulo_grafico, fontsize=17)
     ax.set_ylabel('Quantidade de Participantes')
     
     # Mantém os rótulos na horizontal (rotação 0)

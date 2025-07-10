@@ -1,5 +1,3 @@
-# queries/grafico3_adesao_ramo_acumulado.py
-
 def gerar_query(ano, mes):
     """Gera a query de adesão acumulada para um ano e mês específicos."""
     return f"""

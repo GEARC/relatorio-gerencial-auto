@@ -4,7 +4,6 @@ def gerar_query(ano, mes):
     """Gera a query de adesões por patrocinador para um ano e mês específicos."""
     
     data_alvo = datetime.date(ano, mes, 1)
-    # Precisamos do mês anterior para calcular a diferença
     data_anterior = data_alvo - datetime.timedelta(days=1)
     ano_anterior_logico = data_anterior.year
     mes_anterior_logico = data_anterior.month

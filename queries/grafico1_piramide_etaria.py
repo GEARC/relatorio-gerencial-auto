@@ -1,5 +1,3 @@
-# queries/grafico1_piramide_etaria.py
-
 QUERY = """
 select sum(fe.qtd) QTD, fe.Faixa_Etaria, fe.SEXO
 from (select count(e.ID_PESSOA) qtd,
