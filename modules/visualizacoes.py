@@ -110,8 +110,23 @@ def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico, form
     # --- CORREÇÃO 2: AUMENTA A LARGURA DA FIGURA ---
     fig, ax = plt.subplots(figsize=(15, 8)) # Antes era (12, 7)
     
-    cores = ['#003366', '#d62728', '#ff7f0e', '#2ca02c', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-    bars = ax.bar(labels, valores, color=cores[:len(labels)])
+    cores_por_orgao = {
+        'JUSTIÇA TRABALHISTA': '#003366',
+        'JUSTIÇA FEDERAL': '#d62728',
+        'MPU': '#ff7f0e',
+        'JUSTIÇA ELEITORAL': '#2ca02c',
+        'TJDFT': '#9467bd',
+        'STJ': '#8c564b',
+        'STF': '#e377c2',
+        'JUSTIÇA MILITAR': '#7f7f7f',
+        'CNJ': '#bcbd22',
+        'CNMP': '#17becf',
+        'OUTRO ÓRGÃO/ENTIDADE': '#FF6B6B'  # Cor diferenciada para "outros"
+    }
+    
+    # Aplicar cores baseadas nos labels originais (antes da quebra de linha)
+    cores_aplicadas = [cores_por_orgao.get(label, '#cccccc') for label in labels_originais]
+    bars = ax.bar(labels, valores, color=cores_aplicadas)
     
     for bar in bars:
         altura = bar.get_height()
