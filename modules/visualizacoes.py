@@ -127,10 +127,10 @@ def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico, form
             bar.get_x() + bar.get_width() / 2,
             altura,
             texto_rotulo,
-            ha='center', va='bottom', fontsize=19
+            ha='center', va='bottom', fontsize=16
         )
 
-    ax.set_title(titulo_grafico, fontsize=17)
+    ax.set_title(titulo_grafico, fontsize=16)
     ax.set_ylabel('Quantidade de Participantes')
     
     # Mantém os rótulos na horizontal (rotação 0)
@@ -153,7 +153,7 @@ def criar_grafico_donut(df, caminho_para_salvar, titulo_grafico):
         print(f"DataFrame vazio, não é possível gerar o gráfico '{titulo_grafico}'.")
         return False
 
-    mapeamento_tributacao = { 'R': 'Regressiva', 'P': 'Progressiva', 'N': 'No prazo de opção*' }
+    mapeamento_tributacao = { 'R': 'Regressiva', 'P': 'Progressiva', 'N': 'Sem opção*' }
     df['Legenda'] = df.iloc[:, 0].map(mapeamento_tributacao).fillna(df.iloc[:, 0])
     
     labels_legenda = df['Legenda']

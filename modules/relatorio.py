@@ -623,8 +623,27 @@ def gerar_relatorio_word(dados, data_alvo):
     if criar_grafico_barras_verticais(df_contrib_ramo_mes, caminho_g9, "Contribuição Mensal por Ramo", formato_label='percent_only'):
         doc.add_picture(caminho_g9, width=Inches(6.2))
         doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
+
     doc.add_paragraph("Fonte: DISEG/GEARC")
+
+    p_legenda_g10 = doc.add_paragraph("\nGráfico 10. Distribuição do patrimônio por ramo da justiça (acumulado)")
+    p_legenda_g10.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    caminho_g10 = os.path.join('assets', 'grafico_patrimonio_acumulado.png')
+    
+    # --- CORREÇÃO APLICADA AQUI ---
+    # Chama a mesma função, mas com o novo parâmetro para mostrar apenas a porcentagem
+    if criar_grafico_barras_verticais(
+        dados.get('patrimonio_ramo_acumulado'), 
+        caminho_g10, 
+        "", 
+        formato_label='percent_only' # <--- NOVO PARÂMETRO
+    ):
+        doc.add_picture(caminho_g10, width=Inches(6.2))
+        doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    doc.add_paragraph("Fonte: DISEG/GEARC")
+
+    
 
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
     doc.save(nome_arquivo)
