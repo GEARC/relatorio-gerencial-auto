@@ -26,6 +26,7 @@ from queries.grafico8_contribuicao_paridade import gerar_query as gerar_query_gr
 from queries.tabela6_arrecadacao_cargo import gerar_query as gerar_query_tabela6
 from queries.grafico9_contribuicao_ramo_mes import gerar_query as gerar_query_g9
 from queries.grafico10_patrimonio_ramo_acumulado import gerar_query as gerar_query_g10
+from queries.tabela7_contribuicao_patrocinador import gerar_query as gerar_query_tabela7
 
 def solicitar_data_relatorio():
     """Solicita ao usuário o ano e o mês para o relatório."""
@@ -134,6 +135,10 @@ def main():
     print("\nBuscando dados para o Gráfico de Patrimônio Acumulado por Ramo...")
     query_g10_dinamica = gerar_query_g10(ano_alvo, mes_alvo)
     dados_relatorio['patrimonio_ramo_acumulado'] = buscar_dados(query_g10_dinamica, engine)
+
+    print("\nBuscando dados para Contribuições por Patrocinador...")
+    query_t7_dinamica = gerar_query_tabela7(ano_alvo, mes_alvo)
+    dados_relatorio['contribuicao_patrocinador'] = buscar_dados(query_t7_dinamica, engine)
     
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)
     

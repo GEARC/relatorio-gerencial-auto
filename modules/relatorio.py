@@ -10,10 +10,12 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
 from docx.shared import RGBColor
+from docx.enum.table import WD_ALIGN_VERTICAL
+
 
 # Importa as funções dos outros módulos que serão usadas aqui
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais, criar_grafico_donut, criar_grafico_barras_agrupadas, criar_grafico_paridade
-from modules.processamento import transformar_dados_evolucao, formatar_tabela_arrecadacao, formatar_tabela_cargo
+from modules.processamento import transformar_dados_evolucao, formatar_tabela_arrecadacao, formatar_tabela_cargo, formatar_tabela_patrocinador
 
 def garantir_estilos(doc):
     """Verifica e formata os estilos essenciais do documento."""
@@ -52,7 +54,7 @@ def garantir_estilos(doc):
                 new_style.paragraph_format.first_line_indent = props['first_line_indent']
 
 def adicionar_tabela_nativa_word(documento, df):
-    """Adiciona uma tabela nativa, estilizada e compacta ao Word."""
+    """Adiciona uma tabela nativa, estilizada, compacta e com formatação condicional."""
     if df.empty:
         documento.add_paragraph("[Dados da tabela não encontrados.]", style='CorpoComRecuo')
         return
@@ -60,6 +62,14 @@ def adicionar_tabela_nativa_word(documento, df):
     table = documento.add_table(rows=1, cols=len(df.columns))
     table.style = 'Table Grid'
     
+    # CORREÇÃO 3: Ajusta o layout da tabela para evitar quebras de linha indevidas
+    try:
+        larguras = (Inches(1.5), Inches(1.1), Inches(1.1), Inches(1.2), Inches(1.1))
+        for i, largura in enumerate(larguras):
+            table.columns[i].width = largura
+    except IndexError:
+        print("Aviso: O número de larguras definidas não corresponde ao número de colunas da tabela.")
+
     # Adiciona e estiliza o cabeçalho
     hdr_cells = table.rows[0].cells
     for i, col_name in enumerate(df.columns):
@@ -67,36 +77,36 @@ def adicionar_tabela_nativa_word(documento, df):
         run = cell.paragraphs[0].add_run(str(col_name))
         run.font.bold = True
         run.font.color.rgb = RGBColor(255, 255, 255)
-        # Ajusta o espaçamento do parágrafo do cabeçalho
-        cell.paragraphs[0].paragraph_format.space_before = Pt(6)
-        cell.paragraphs[0].paragraph_format.space_after = Pt(6)
-        # Colore o fundo da célula
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         shading_elm = parse_xml(r'<w:shd {} w:fill="0F406D"/>'.format(nsdecls('w')))
         cell._tc.get_or_add_tcPr().append(shading_elm)
     
     table.rows[0]._tr.get_or_add_trPr().append(parse_xml(r'<w:tblHeader {}/>'.format(nsdecls('w'))))
 
-    # Adiciona as linhas de dados
+    # Adiciona as linhas de dados com formatação
     for _, row_data in df.iterrows():
         row_cells = table.add_row().cells
-        # Verifica se esta é a linha de "TOTAIS"
-        is_total_row = str(row_data.iloc[0]) == 'TOTAIS'
+        # CORREÇÃO 1: Verifica se esta é a linha de "TOTAL"
+        is_total_row = str(row_data.iloc[0]) == 'TOTAL'
         
         for i, cell_data in enumerate(row_data):
             cell = row_cells[i]
             cell.text = str(cell_data)
             paragraph = cell.paragraphs[0]
             
-            # --- CORREÇÃO 1: Deixa a tabela mais compacta ---
-            # Remove o espaçamento antes e depois dos parágrafos em todas as células de dados
-            p_format = paragraph.paragraph_format
-            p_format.space_before = Pt(3)
-            p_format.space_after = Pt(3)
+            # CORREÇÃO 2: Centraliza o conteúdo de todas as células
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             
-            # --- CORREÇÃO 2: Deixa a linha de TOTAIS em negrito ---
+            # Aplica negrito se for a linha de TOTAL
             if is_total_row:
                 for run in paragraph.runs:
                     run.font.bold = True
+
+            # Deixa a tabela mais compacta
+            p_format = paragraph.paragraph_format
+            p_format.space_before = Pt(3)
+            p_format.space_after = Pt(3)
 
 def gerar_relatorio_word(dados, data_alvo):
     """Gera o documento Word completo com todas as seções."""
@@ -643,7 +653,31 @@ def gerar_relatorio_word(dados, data_alvo):
     
     doc.add_paragraph("Fonte: DISEG/GEARC")
 
+     # --- NOVA SEÇÃO 3.4: CONTRIBUIÇÕES POR PATROCINADOR ---
+    contador_titulo3 += 1 # Ajuste o número da seção conforme necessário
+    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Contribuições por patrocinador", style='Título 3')
     
+    df_patrocinador_raw = dados.get('contribuicao_patrocinador')
+    
+    if df_patrocinador_raw is not None and not df_patrocinador_raw.empty:
+        # Texto dinâmico
+        patrocinador_mes = df_patrocinador_raw.iloc[0]['Patrocinador']
+        df_sorted_acumulado = df_patrocinador_raw.sort_values(by='contribuicoes_acumuladas', ascending=False)
+        patrocinador_acumulado = df_sorted_acumulado.iloc[0]['Patrocinador']
+        
+        doc.add_paragraph(
+            f"Em {data_alvo.strftime('%B/%Y')}, o {patrocinador_mes} ficou no topo do ranking na contribuição mensal e "
+            f"o {patrocinador_acumulado} continua com o maior patrimônio por patrocinador.",
+            style='CorpoComRecuo'
+        )
+
+        # Formata e adiciona a tabela nativa
+        p_legenda_t7 = doc.add_paragraph("Tabela 7. Arrecadação e Patrimônio por patrocinador")
+        p_legenda_t7.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        df_patrocinador_formatado = formatar_tabela_patrocinador(df_patrocinador_raw.copy())
+        adicionar_tabela_nativa_word(doc, df_patrocinador_formatado)
+        
+    doc.add_paragraph("Fonte: DISEG/GEARC")
 
     nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
     doc.save(nome_arquivo)

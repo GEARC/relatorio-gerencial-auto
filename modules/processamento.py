@@ -119,3 +119,40 @@ def formatar_tabela_cargo(df):
     }, inplace=True)
     
     return df_com_total.fillna('')
+
+def formatar_tabela_patrocinador(df):
+    """Formata o DataFrame da Tabela 7 para exibição."""
+    if df.empty:
+        return df
+
+    # Calcula a linha de TOTAL antes de formatar
+    total_mes = df['contribuicao_no_mes'].sum()
+    total_acumulado = df['contribuicoes_acumuladas'].sum()
+    
+    total_row = pd.DataFrame([{
+        'Patrocinador': 'TOTAL',
+        'contribuicao_no_mes': total_mes,
+        'representatividade_contribuicao': 100.0,
+        'contribuicoes_acumuladas': total_acumulado,
+        'representatividade_patrimonio': 100.0
+    }])
+    
+    df_com_total = pd.concat([total_row, df], ignore_index=True)
+
+    # Aplica a formatação de moeda e percentual
+    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+    df_com_total['contribuicao_no_mes'] = df_com_total['contribuicao_no_mes'].apply(lambda x: locale.currency(x, grouping=True))
+    df_com_total['representatividade_contribuicao'] = df_com_total['representatividade_contribuicao'].apply(lambda x: f'{x:.2f}%'.replace('.', ','))
+    df_com_total['contribuicoes_acumuladas'] = df_com_total['contribuicoes_acumuladas'].apply(lambda x: locale.currency(x, grouping=True))
+    df_com_total['representatividade_patrimonio'] = df_com_total['representatividade_patrimonio'].apply(lambda x: f'{x:.2f}%'.replace('.', ','))
+    
+    # Renomeia as colunas para a versão final
+    df_com_total.rename(columns={
+        'Patrocinador': 'Patrocinador',
+        'contribuicao_no_mes': 'Contribuição no mês',
+        'representatividade_contribuicao': 'Representatividade da contribuição',
+        'contribuicoes_acumuladas': 'Contribuições acumuladas',
+        'representatividade_patrimonio': 'Representatividade do patrimônio'
+    }, inplace=True)
+    
+    return df_com_total
