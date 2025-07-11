@@ -319,9 +319,7 @@ def gerar_relatorio_word(dados, data_alvo):
 
             # Monta o texto completo
             texto_dinamico = (
-                f"Em {data_alvo.strftime('%B/%Y')}, o perfil de tributação demonstra a preferência de {perc_regressiva:.0f}% dos participantes pelo regime regressivo. "
-                f"O regime progressivo representou {perc_progressiva:.0f}% das escolhas e há {perc_sem_opcao:.0f}% dos participantes que "
-                f"ainda não fizeram a opção (Gráfico 4)."
+                f"Em {data_alvo.strftime('%B/%Y')}, o perfil de tributação demonstra a preferência de {perc_regressiva:.0f}% dos participantes pelo regime regressivo (Gráfico 4). "
             )
             doc.add_paragraph(texto_dinamico, style='CorpoComRecuo')
 
