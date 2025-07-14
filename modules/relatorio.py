@@ -54,7 +54,7 @@ def garantir_estilos(doc):
                 new_style.paragraph_format.first_line_indent = props['first_line_indent']
 
 def adicionar_tabela_nativa_word(documento, df):
-    """Adiciona uma tabela nativa, estilizada, compacta e com formatação condicional."""
+    """Adiciona uma tabela nativa com formatação detalhada para não quebrar linhas."""
     if df.empty:
         documento.add_paragraph("[Dados da tabela não encontrados.]", style='CorpoComRecuo')
         return
@@ -62,31 +62,32 @@ def adicionar_tabela_nativa_word(documento, df):
     table = documento.add_table(rows=1, cols=len(df.columns))
     table.style = 'Table Grid'
     
-    # CORREÇÃO 3: Ajusta o layout da tabela para evitar quebras de linha indevidas
-    try:
-        larguras = (Inches(1.5), Inches(1.1), Inches(1.1), Inches(1.2), Inches(1.1))
-        for i, largura in enumerate(larguras):
-            table.columns[i].width = largura
-    except IndexError:
-        print("Aviso: O número de larguras definidas não corresponde ao número de colunas da tabela.")
-
     # Adiciona e estiliza o cabeçalho
     hdr_cells = table.rows[0].cells
     for i, col_name in enumerate(df.columns):
         cell = hdr_cells[i]
-        run = cell.paragraphs[0].add_run(str(col_name))
+        cell.text = str(col_name)
+        
+        paragraph = cell.paragraphs[0]
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = paragraph.runs[0]
         run.font.bold = True
         run.font.color.rgb = RGBColor(255, 255, 255)
-        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run.font.size = Pt(9)
+        
         shading_elm = parse_xml(r'<w:shd {} w:fill="0F406D"/>'.format(nsdecls('w')))
         cell._tc.get_or_add_tcPr().append(shading_elm)
-    
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+
+        tc_pr = cell._tc.get_or_add_tcPr()
+        no_wrap_elm = parse_xml(r'<w:noWrap {}/>'.format(nsdecls('w')))
+        tc_pr.append(no_wrap_elm)
+
     table.rows[0]._tr.get_or_add_trPr().append(parse_xml(r'<w:tblHeader {}/>'.format(nsdecls('w'))))
 
     # Adiciona as linhas de dados com formatação
     for _, row_data in df.iterrows():
         row_cells = table.add_row().cells
-        # CORREÇÃO 1: Verifica se esta é a linha de "TOTAL"
         is_total_row = str(row_data.iloc[0]) == 'TOTAL'
         
         for i, cell_data in enumerate(row_data):
@@ -94,19 +95,20 @@ def adicionar_tabela_nativa_word(documento, df):
             cell.text = str(cell_data)
             paragraph = cell.paragraphs[0]
             
-            # CORREÇÃO 2: Centraliza o conteúdo de todas as células
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-            
-            # Aplica negrito se for a linha de TOTAL
-            if is_total_row:
-                for run in paragraph.runs:
-                    run.font.bold = True
-
-            # Deixa a tabela mais compacta
             p_format = paragraph.paragraph_format
             p_format.space_before = Pt(3)
             p_format.space_after = Pt(3)
+
+            tc_pr = cell._tc.get_or_add_tcPr()
+            no_wrap_elm = parse_xml(r'<w:noWrap {}/>'.format(nsdecls('w')))
+            tc_pr.append(no_wrap_elm)
+
+            for run in paragraph.runs:
+                run.font.size = Pt(8)
+                if is_total_row:
+                    run.font.bold = True
 
 def gerar_relatorio_word(dados, data_alvo):
     """Gera o documento Word completo com todas as seções."""
@@ -240,7 +242,7 @@ def gerar_relatorio_word(dados, data_alvo):
     p_fonte_t2 = doc.add_paragraph("Fonte: DISEG/GEARC")
     p_fonte_t2.paragraph_format.space_before = Pt(6)
 
-    # --- ADICIONA A NOVA SEÇÃO 2.4 (era 2.5 no doc original) ---
+    # --- ADICIONA A NOVA SEÇÃO 2.4
     contador_titulo3 += 1 # Incrementa para o próximo número de seção
     doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Adesão por Ramo da Justiça", style='Título 3')
 

@@ -91,7 +91,7 @@ def formatar_tabela_cargo(df):
     total_participantes_geral = df['QuantidadeParticipantes'].sum()
     
     total_row = pd.DataFrame([{
-        'CARGO': 'Total geral',
+        'CARGO': 'TOTAL',
         'RepresentatividadeContribuicao': '',
         'ContribuicaoMedia': '',
         'QuantidadeParticipantes': '',

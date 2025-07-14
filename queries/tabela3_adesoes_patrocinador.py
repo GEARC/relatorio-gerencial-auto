@@ -52,7 +52,7 @@ def gerar_query(ano, mes):
         WHERE dp.total_mes_atual > 0 OR (dp.total_mes_atual - dp.total_mes_anterior) != 0
         UNION ALL
         SELECT 
-            'TOTAIS' as Sigla,
+            'TOTAL' as Sigla,
             tg.total_geral_movimentacao, '100,00%',
             tg.total_geral_acumulado, '100,00%',
             -1 as ordem_prioridade, 9999999 as valor_ordem
