@@ -257,7 +257,7 @@ def gerar_relatorio_word(dados, data_alvo):
         numero_maior_total = int(df_adesao_acumulado.iloc[0, 1])
 
         doc.add_paragraph(
-            f"No mês de {data_alvo.strftime('%B/%Y')}, a {ramo_maior_adesao} obteve o maior número de adesões ({numero_maior_adesao}) e, desde o "
+            f"No mês de {data_alvo.strftime('%B/%Y')}, o (a) {ramo_maior_adesao} obteve o maior número de adesões ({numero_maior_adesao}) e, desde o "
             f"início do funcionamento da Funpresp-Jud, a {ramo_maior_total} permanece com o maior número de participantes ({numero_maior_total}).",
             style='CorpoComRecuo'
         )
