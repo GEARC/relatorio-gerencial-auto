@@ -11,7 +11,7 @@ from modules.relatorio import gerar_relatorio_word, converter_docx_para_pdf
 from modules.database import conectar_banco, buscar_dados
 from queries.tabela1_evolucao_adesoes import gerar_query as gerar_query_evolucao
 from queries.tabela_distribuicao_sexo import QUERY as query_distribuicao_sexo
-from queries.tabela2_distribuicao_cargos import QUERY as query_distribuicao_cargos
+from queries.tabela2_distribuicao_cargos import gerar_query as gerar_query
 from queries.grafico1_piramide_etaria import QUERY as query_piramide_etaria
 from queries.grafico2_adesao_ramo_mes import gerar_query as gerar_query_g2_ramo_mes
 from queries.grafico3_adesao_ramo_acumulado import gerar_query as gerar_query_g3_ramo_acumulado
@@ -81,7 +81,7 @@ def main():
     dados_relatorio['piramide_etaria'] = buscar_dados(query_piramide_dinamica, engine)
 
     print("\nBuscando dados para Distribuição por Cargos...")
-    query_cargos_dinamica = query_distribuicao_cargos.replace('?', f"'{param_texto_data}'")
+    query_cargos_dinamica = gerar_query(ano_alvo, mes_alvo)
     dados_relatorio['distribuicao_cargos'] = buscar_dados(query_cargos_dinamica, engine)
 
     print("\nBuscando dados para Gráfico de Adesão Mensal por Ramo...")

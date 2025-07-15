@@ -178,7 +178,7 @@ def gerar_relatorio_word(dados, data_alvo):
             if total_geral > 0:
                 percentual_masc = (total_masc / total_geral) * 100
                 percentual_fem = (total_fem / total_geral) * 100
-                doc.add_paragraph(f"Atualmente, o percentual de participantes está representado em {percentual_masc:.2f}% e {percentual_fem:.2f}% de mulheres.", style='CorpoComRecuo')
+                doc.add_paragraph(f"Atualmente, o percentual de participantes está representado em {percentual_masc:.2f}% de homens e {percentual_fem:.2f}% de mulheres.", style='CorpoComRecuo')
             tabela_sexo_resumo = pd.DataFrame({'SITUAÇÃO': ['Total de Participantes'], 'FEMININO': [total_fem], 'MASCULINO': [total_masc], 'TOTAL GERAL': [total_geral]})
             caminho_imagem_tabela_sexo = os.path.join('assets', 'tabela_sexo.png')
             if gerar_imagem_tabela(tabela_sexo_resumo, caminho_imagem_tabela_sexo):
