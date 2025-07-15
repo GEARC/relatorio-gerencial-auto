@@ -5,8 +5,10 @@ import matplotlib.ticker as mticker
 import matplotlib.colors as mcolors
 import pandas as pd
 import numpy as np
-from config import PATH_WKHTMLTOIMAGE
 import textwrap
+from config import PATH_WKHTMLTOIMAGE
+from adjustText import adjust_text
+
 
 config = imgkit.config(wkhtmltoimage=PATH_WKHTMLTOIMAGE)
 
@@ -163,7 +165,7 @@ def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico, form
     return True
 
 def criar_grafico_donut(df, caminho_para_salvar, titulo_grafico):
-    """Cria um gráfico de donut com rótulos de porcentagem posicionados de forma inteligente."""
+    """Cria um gráfico de donut com rótulos de porcentagem bem posicionados."""
     if df.empty:
         print(f"DataFrame vazio, não é possível gerar o gráfico '{titulo_grafico}'.")
         return False
@@ -174,7 +176,8 @@ def criar_grafico_donut(df, caminho_para_salvar, titulo_grafico):
     labels_legenda = df['Legenda']
     valores = pd.to_numeric(df.iloc[:, 1])
     
-    cores = ['#DD7E2E', '#0F406D', '#5DADE2']
+    mapa_de_cores = {'Regressiva': '#DD7E2E', 'Progressiva': '#5DADE2', 'Sem opção*': '#0F406D'}
+    cores_ordenadas = [mapa_de_cores.get(label, '#808080') for label in labels_legenda]
     
     plt.style.use('seaborn-v0_8-whitegrid')
     fig, ax = plt.subplots(figsize=(10, 7), subplot_kw=dict(aspect="equal"))
@@ -183,45 +186,44 @@ def criar_grafico_donut(df, caminho_para_salvar, titulo_grafico):
     wedges, texts = ax.pie(
         valores,
         startangle=90,
-        colors=cores,
+        colors=cores_ordenadas,
         wedgeprops=dict(width=0.4, edgecolor='w')
     )
 
-    # --- LÓGICA DE POSICIONAMENTO CONDICIONAL ---
+    # --- LÓGICA DE RÓTULOS COM AJUSTE AUTOMÁTICO ---
     total = sum(valores)
-    limite_para_texto_interno = 10  # Limite de 10% para o texto ficar dentro
+    if total == 0: return False
+    
+    limite_para_texto_interno = 7  # Limite para o texto ficar dentro
+    textos_para_ajustar = [] # Lista para guardar os textos externos
 
     for i, p in enumerate(wedges):
         percentual = (valores.iloc[i] / total) * 100
         
-        # Pega o ângulo e o raio do meio da fatia
         ang = (p.theta2 - p.theta1) / 2. + p.theta1
+        y = np.sin(np.deg2rad(ang))
+        x = np.cos(np.deg2rad(ang))
         
-        # Se a fatia for pequena, coloca o texto FORA
+        # Se a fatia for pequena, prepara o texto para ajuste externo
         if percentual < limite_para_texto_interno:
-            # Posição fora do gráfico (raio > 1.0)
-            y = np.sin(np.deg2rad(ang))
-            x = np.cos(np.deg2rad(ang))
-            # Alinha o texto para fora
-            horizontalalignment = {-1: "right", 1: "left"}[int(np.sign(x))]
-            ax.text(x * 1.1, y * 1.1, f'{percentual:.0f}%', ha=horizontalalignment, va='center', color='black', size=10)
+            texto_externo = ax.text(x * 1.1, y * 1.1, f'{percentual:.2f}%'.replace('.',','), 
+                                    ha='center', va='center', color='black', size=10)
+            textos_para_ajustar.append(texto_externo)
         
         # Se a fatia for grande, coloca o texto DENTRO
         else:
-            # Posição dentro do anel
-            y = np.sin(np.deg2rad(ang)) * 0.85
-            x = np.cos(np.deg2rad(ang)) * 0.85
-            
-            # Lógica para cor de texto visível
             slice_color = wedges[i].get_facecolor()
-            r, g, b, _ = slice_color
-            luminance = 0.299*r + 0.587*g + 0.114*b
+            luminance = mcolors.rgb_to_hsv(slice_color[:3])[2]
             text_color = 'black' if luminance > 0.5 else 'white'
-            
-            ax.text(x, y, f'{percentual:.0f}%', ha='center', va='center', color=text_color, weight='bold', size=12)
+            ax.text(x * 0.82, y * 0.82, f'{percentual:.2f}%'.replace('.',','), 
+                    ha='center', va='center', color=text_color, weight='bold', size=11)
+
+    # Chama a biblioteca para ajustar apenas os textos externos, evitando sobreposição
+    adjust_text(textos_para_ajustar, 
+                arrowprops=dict(arrowstyle="-", color='gray', lw=0.5))
 
     ax.axis('equal')
-    ax.legend(wedges, labels_legenda, loc="center left", bbox_to_anchor=(1.05, 0.5), frameon=False)
+    ax.legend(wedges, labels_legenda, title="", loc="center left", bbox_to_anchor=(1.05, 0.5), frameon=False)
     ax.set_title(titulo_grafico, fontsize=16, pad=20)
     
     plt.savefig(caminho_para_salvar, dpi=300, bbox_inches='tight')
