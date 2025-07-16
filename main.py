@@ -69,77 +69,114 @@ def main():
     print("\nBuscando dados para Evolução das Adesões...")
     query_evolucao_dinamica = gerar_query_evolucao(ano_alvo, mes_alvo)
     dados_relatorio['evolucao_adesoes'] = buscar_dados(query_evolucao_dinamica, engine)
+    #if not dados_relatorio['evolucao_adesoes'].empty:
+        #dados_relatorio['evolucao_adesoes'].to_csv('amostra_dados_evolucao_adesoes.csv', index=False, encoding='utf-8-sig')
     
     param_texto_data = f"{ano_alvo}{mes_alvo:02d}"
     
     print("\nBuscando dados para Distribuição por Sexo...")
     query_sexo_dinamica = query_distribuicao_sexo.replace('?', f"'{param_texto_data}'")
     dados_relatorio['distribuicao_sexo'] = buscar_dados(query_sexo_dinamica, engine)
+    #if not dados_relatorio['distribuicao_sexo'].empty:
+        #dados_relatorio['distribuicao_sexo'].to_csv('amostra_dados_distribuicao_sexo.csv', index=False, encoding='utf-8-sig')
     
     print("\nBuscando dados para o Gráfico de Pirâmide Etária...")
     query_piramide_dinamica = query_piramide_etaria.replace('?', f"'{param_texto_data}'")
     dados_relatorio['piramide_etaria'] = buscar_dados(query_piramide_dinamica, engine)
+    #if not dados_relatorio['piramide_etaria'].empty:
+        #dados_relatorio['piramide_etaria'].to_csv('amostra_dados_piramide_etaria.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para Distribuição por Cargos...")
     query_cargos_dinamica = gerar_query(ano_alvo, mes_alvo)
     dados_relatorio['distribuicao_cargos'] = buscar_dados(query_cargos_dinamica, engine)
+    #if not dados_relatorio['distribuicao_cargos'].empty:
+        #dados_relatorio['distribuicao_cargos'].to_csv('amostra_dados_distribuicao_cargos.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para Gráfico de Adesão Mensal por Ramo...")
     query_g2_dinamica = gerar_query_g2_ramo_mes(ano_alvo, mes_alvo)
     dados_relatorio['adesao_ramo_mes'] = buscar_dados(query_g2_dinamica, engine)
+    #if not dados_relatorio['adesao_ramo_mes'].empty:
+        #dados_relatorio['adesao_ramo_mes'].to_csv('amostra_dados_adesao_ramo_mes.csv', index=False, encoding='utf-8-sig')
     
     print("\nBuscando dados para Gráfico de Adesão Acumulada por Ramo...")
     query_g3_dinamica = gerar_query_g3_ramo_acumulado(ano_alvo, mes_alvo)
     dados_relatorio['adesao_ramo_acumulado'] = buscar_dados(query_g3_dinamica, engine)
+    #if not dados_relatorio['adesao_ramo_acumulado'].empty:
+        #dados_relatorio['adesao_ramo_acumulado'].to_csv('amostra_dados_adesao_ramo_acumulado.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para Adesões por Patrocinador...")
     query_patrocinador_dinamica = gerar_query_patrocinador(ano_alvo, mes_alvo)
     dados_relatorio['adesoes_patrocinador'] = buscar_dados(query_patrocinador_dinamica, engine)
+    #if not dados_relatorio['adesoes_patrocinador'].empty:
+        #dados_relatorio['adesoes_patrocinador'].to_csv('amostra_dados_adesoes_patrocinador.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para o Gráfico Mensal de Regime de Tributação...")
     query_g4_dinamica = gerar_query_g4_tributacao(ano_alvo, mes_alvo)
     dados_relatorio['regime_tributacao_mes'] = buscar_dados(query_g4_dinamica, engine)
+    #if not dados_relatorio['regime_tributacao_mes'].empty:
+        #dados_relatorio['regime_tributacao_mes'].to_csv('amostra_dados_regime_tributacao_mes.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para o Gráfico de Regime de Tributação...")
     query_g5_dinamica = gerar_query_g5_tributacao(ano_alvo, mes_alvo)
     dados_relatorio['regime_tributacao_acumulado'] = buscar_dados(query_g5_dinamica, engine)
+    #if not dados_relatorio['regime_tributacao_acumulado'].empty:
+        #dados_relatorio['regime_tributacao_acumulado'].to_csv('amostra_dados_regime_tributacao_acumulado.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para o Gráfico Mensal de Percentual de Contribuição...")
     query_g6_dinamica = gerar_query_g6(ano_alvo, mes_alvo)
     dados_relatorio['percentual_contrib_mes'] = buscar_dados(query_g6_dinamica, engine)
+    #if not dados_relatorio['percentual_contrib_mes'].empty:
+        #dados_relatorio['percentual_contrib_mes'].to_csv('amostra_dados_percentual_contrib_mes.csv', index=False, encoding='utf-8-sig')
     
     print("\nBuscando dados para o Gráfico Acumulado de Percentual de Contribuição...")
     query_g7_dinamica = gerar_query_g7(ano_alvo, mes_alvo)
     dados_relatorio['percentual_contrib_acumulado'] = buscar_dados(query_g7_dinamica, engine)
+    #if not dados_relatorio['percentual_contrib_acumulado'].empty:
+        #dados_relatorio['percentual_contrib_acumulado'].to_csv('amostra_dados_percentual_contrib_acumulado.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para a Tabela de Arrecadação...")
     query_t4_dinamica = gerar_query_tabela4(ano_alvo, mes_alvo)
     dados_relatorio['arrecadacao_tabela'] = buscar_dados(query_t4_dinamica, engine)
+    #if not dados_relatorio['arrecadacao_tabela'].empty:
+        #dados_relatorio['arrecadacao_tabela'].to_csv('amostra_dados_arrecadacao_tabela.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para o Gráfico de Paridade...")
     query_g8_dinamica = gerar_query_grafico8(ano_alvo, mes_alvo)
     dados_relatorio['arrecadacao_grafico'] = buscar_dados(query_g8_dinamica, engine)
+    #if not dados_relatorio['arrecadacao_grafico'].empty:
+        #dados_relatorio['arrecadacao_grafico'].to_csv('amostra_dados_arrecadacao_grafico.csv', index=False, encoding='utf-8-sig')
     
     print("\nBuscando dados para a Tabela de Arrecadação por Tipo...")
     query_t5_dinamica = gerar_query_tabela5(ano_alvo, mes_alvo)
     dados_relatorio['arrecadacao_tipo'] = buscar_dados(query_t5_dinamica, engine)
+    #if not dados_relatorio['arrecadacao_tipo'].empty:
+        #dados_relatorio['arrecadacao_tipo'].to_csv('amostra_dados_arrecadacao_tipo.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para a Tabela de Arrecadação por Cargo...")
     query_t6_dinamica = gerar_query_tabela6(ano_alvo, mes_alvo)
     dados_relatorio['arrecadacao_cargo'] = buscar_dados(query_t6_dinamica, engine)
+    #if not dados_relatorio['arrecadacao_cargo'].empty:
+        #dados_relatorio['arrecadacao_cargo'].to_csv('amostra_dados_arrecadacao_cargo.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para o Gráfico de Contribuição Mensal por Ramo...")
     query_g9_dinamica = gerar_query_g9(ano_alvo, mes_alvo)
     dados_relatorio['contribuicao_ramo_mes'] = buscar_dados(query_g9_dinamica, engine)
+    #if not dados_relatorio['contribuicao_ramo_mes'].empty:
+        #dados_relatorio['contribuicao_ramo_mes'].to_csv('amostra_dados_contribuicao_ramo_mes.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para o Gráfico de Patrimônio Acumulado por Ramo...")
     query_g10_dinamica = gerar_query_g10(ano_alvo, mes_alvo)
     dados_relatorio['patrimonio_ramo_acumulado'] = buscar_dados(query_g10_dinamica, engine)
+    #if not dados_relatorio['patrimonio_ramo_acumulado'].empty:
+        #dados_relatorio['patrimonio_ramo_acumulado'].to_csv('amostra_dados_patrimonio_ramo_acumulado.csv', index=False, encoding='utf-8-sig')
 
     print("\nBuscando dados para Contribuições por Patrocinador...")
     query_t7_dinamica = gerar_query_tabela7(ano_alvo, mes_alvo)
     dados_relatorio['contribuicao_patrocinador'] = buscar_dados(query_t7_dinamica, engine)
-    
+    #if not dados_relatorio[''].empty:
+        #dados_relatorio[''].to_csv('amostra_dados_.csv', index=False, encoding='utf-8-sig')
+       
+        
     nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)
     
     if nome_arquivo_docx:
