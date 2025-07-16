@@ -112,11 +112,18 @@ def adicionar_tabela_nativa_word(documento, df):
 
 def gerar_relatorio_word(dados, data_alvo):
     """Gera o documento Word completo com todas as seções."""
-    TEMPLATE_PATH = 'template.docx'
+ # --- LÓGICA DE TEMPLATE DINÂMICO ---
+    ano_str = data_alvo.strftime('%Y')
+    mes_str = data_alvo.strftime('%m')
+    nome_template_especifico = f"template_{mes_str}_{ano_str}.docx"
+    caminho_template_especifico = os.path.join('templates', ano_str, nome_template_especifico)
+    template_padrao = os.path.join('templates', 'template.docx')
+    caminho_template_usado = caminho_template_especifico if os.path.exists(caminho_template_especifico) else template_padrao
+    print(f"Usando template: {caminho_template_usado}")
     try:
-        doc = Document(TEMPLATE_PATH)
+        doc = Document(caminho_template_usado)
     except Exception as e:
-        print(f"Erro ao abrir o template: {e}")
+        print(f"Erro fatal ao abrir o template '{caminho_template_usado}'. Erro: {e}")
         return None
     
     garantir_estilos(doc)
@@ -679,10 +686,34 @@ def gerar_relatorio_word(dados, data_alvo):
         
     doc.add_paragraph("Fonte: DISEG/GEARC")
 
-    nome_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
-    doc.save(nome_arquivo)
-    print(f"\nRelatório '{nome_arquivo}' gerado com sucesso!")
-    return nome_arquivo
+     # --- LÓGICA DE SALVAMENTO EM PASTA DINÂMICA ---
+    
+    # 1. Mapeamento de número do mês para nome da pasta
+    mapa_mes_pasta = {
+        1: '01janeiro', 2: '02fevereiro', 3: '03marco', 4: '04abril',
+        5: '05maio', 6: '06junho', 7: '07julho', 8: '08agosto',
+        9: '09setembro', 10: '10outubro', 11: '11novembro', 12: '12dezembro'
+    }
+    nome_pasta_mes = mapa_mes_pasta.get(data_alvo.month)
+    
+    # 2. Constrói o caminho completo da pasta (ex: outputs/2025/05maio)
+    # Assumindo que você também queira uma pasta para o ano. Se não, remova ano_str.
+    ano_str = str(data_alvo.year)
+    caminho_saida = os.path.join('outputs', ano_str, nome_pasta_mes)
+    
+    # 3. Cria a pasta e subpastas se elas não existirem
+    os.makedirs(caminho_saida, exist_ok=True)
+    
+    # 4. Define o nome final do arquivo e o caminho completo
+    nome_base_arquivo = f"Relatorio_Gerencial_Completo_{data_alvo.strftime('%Y-%m')}.docx"
+    caminho_completo_arquivo = os.path.join(caminho_saida, nome_base_arquivo)
+    
+    # Salva o documento no caminho dinâmico
+    doc.save(caminho_completo_arquivo)
+    print(f"\nRelatório salvo com sucesso em: {caminho_completo_arquivo}")
+    
+    # Retorna o caminho completo para a conversão de PDF
+    return caminho_completo_arquivo
 
 def converter_docx_para_pdf(caminho_docx):
     """Converte um arquivo .docx para .pdf usando o Microsoft Word."""
