@@ -294,12 +294,15 @@ def gerar_relatorio_word(dados, data_alvo):
     
     p_legenda_t3 = doc.add_paragraph("Tabela 3. Adesões por patrocinador")
     p_legenda_t3.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_legenda_t3.paragraph_format.keep_with_next = True
     p_legenda_t3.paragraph_format.space_before = Pt(12)
     p_legenda_t3.paragraph_format.space_after = Pt(6)
 
-    adicionar_tabela_nativa_word(doc, dados.get('adesoes_patrocinador'))
+    df_patrocinador = dados.get('adesoes_patrocinador')
+    adicionar_tabela_nativa_word(doc, df_patrocinador)
 
     p_fonte_t3 = doc.add_paragraph("Fonte: DISEG/GEARC")
+    p_fonte_t3.paragraph_format.keep_with_next = True
     p_fonte_t3.paragraph_format.space_before = Pt(6)
 
 
@@ -678,13 +681,19 @@ def gerar_relatorio_word(dados, data_alvo):
             style='CorpoComRecuo'
         )
 
-        # Formata e adiciona a tabela nativa
+        # Legenda da tabela
         p_legenda_t7 = doc.add_paragraph("Tabela 7. Arrecadação e Patrimônio por patrocinador")
         p_legenda_t7.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_legenda_t7.paragraph_format.keep_with_next = True
+    
+        # Formata e adiciona a tabela nativa
         df_patrocinador_formatado = formatar_tabela_patrocinador(df_patrocinador_raw.copy())
         adicionar_tabela_nativa_word(doc, df_patrocinador_formatado)
         
-    doc.add_paragraph("Fonte: DISEG/GEARC")
+
+        # Fonte grudada à tabela
+        p_fonte_t7 = doc.add_paragraph("Fonte: DISEG/GEARC")
+        p_fonte_t7.paragraph_format.keep_with_next = True
 
      # --- LÓGICA DE SALVAMENTO EM PASTA DINÂMICA ---
     
