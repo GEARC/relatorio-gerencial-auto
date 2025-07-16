@@ -59,6 +59,11 @@ def formatar_tabela_arrecadacao(df, data_alvo):
     if df.empty:
         return df
     
+    try:
+        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+    except locale.Error:
+        locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
+    
     # Pega os nomes dos meses
     mes_atual_nome = data_alvo.strftime('%B/%Y').capitalize()
     mes_passado_nome = (data_alvo - pd.DateOffset(months=1)).strftime('%B/%Y').capitalize()
