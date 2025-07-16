@@ -29,7 +29,7 @@ def gerar_query(ano, mes):
             left join portal.dbo.participante_tipo_contribuicao ptc on ptc.id_contribuicao_trust = ff.ID_CONTRIBUICAO   
             left join CARGO c on c.ID_CARGO = pe.ID_CARGO AND c.ID_EMP = pe.ID_EMP 
             left join LOCAL LE on le.ID_LOCAL = pe.id_local 
-            WHERE 1 = 1 AND pe.IC_EMP_PATROC = 'N' AND pe.IC_PARTICIPANTE = 'S'
+            WHERE 1 = 1 AND pe.IC_EMP_PATROC = 'N' AND pe.IC_PARTICIPANTE = 'S'  and ptc.tipo_contribuicao = 'NORMAL'
 
             UNION ALL
 
@@ -48,7 +48,7 @@ def gerar_query(ano, mes):
             left join portal.dbo.participante_tipo_contribuicao ptc on ptc.id_contribuicao_trust = ff.ID_CONTRIBUICAO 
             left join CARGO c on c.ID_CARGO = pe.ID_CARGO AND c.ID_EMP = pe.ID_EMP 
             left join LOCAL LE on le.ID_LOCAL = pe.id_local 
-            WHERE 1 = 1 AND pe.IC_EMP_PATROC = 'N' AND pe.IC_PARTICIPANTE = 'S'
+            WHERE 1 = 1 AND pe.IC_EMP_PATROC = 'N' AND pe.IC_PARTICIPANTE = 'S'  and ptc.tipo_contribuicao = 'NORMAL'
         ) a
         -- Filtro principal agora dinâmico
         where 1=1 and a.NR_ANO_REF = {ano} and a.NR_MES_REF = {mes}
