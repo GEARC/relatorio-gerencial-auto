@@ -170,7 +170,6 @@ def gerar_relatorio_word(dados, data_alvo):
     else:
         doc.add_paragraph("[Dados para a tabela de evolução não foram encontrados.]", style='CorpoComRecuo')
         
-    doc.add_paragraph("Fonte: DISEG/GEARC")
     contador_titulo3 += 1
     # --- FIM DA SEÇÃO 2.1 ---
 
@@ -222,7 +221,6 @@ def gerar_relatorio_word(dados, data_alvo):
             doc.add_paragraph("[Falha ao gerar o gráfico de pirâmide etária.]")
     else:
         doc.add_paragraph("[Dados para o gráfico de pirâmide não foram encontrados.]")
-    doc.add_paragraph("Fonte: DISEG/GEARC")
     
   # --- 3. ADICIONA A NOVA SEÇÃO 2.4 ---
     contador_titulo2 = 2 # Assumindo que estamos na seção 2
@@ -246,8 +244,6 @@ def gerar_relatorio_word(dados, data_alvo):
     else:
         doc.add_paragraph("[Dados para a tabela de distribuição por cargos não foram encontrados.]", style='CorpoComRecuo')
         
-    p_fonte_t2 = doc.add_paragraph("Fonte: DISEG/GEARC")
-    p_fonte_t2.paragraph_format.space_before = Pt(6)
 
     # --- ADICIONA A NOVA SEÇÃO 2.4
     contador_titulo3 += 1 # Incrementa para o próximo número de seção
@@ -275,7 +271,6 @@ def gerar_relatorio_word(dados, data_alvo):
     caminho_g2 = os.path.join('assets', 'grafico_adesao_mes.png')
     if criar_grafico_barras_verticais(df_adesao_mes, caminho_g2, "Adesões no Mês por Ramo"):
         doc.add_picture(caminho_g2, width=Inches(6.2))
-    doc.add_paragraph("Fonte: DISEG/GEARC")
 
     # Gráfico 3: Acumulado
     p_legenda_g3 = doc.add_paragraph("Gráfico 3. Distribuição de participantes por ramo da justiça (acumulado)")
@@ -283,10 +278,9 @@ def gerar_relatorio_word(dados, data_alvo):
     caminho_g3 = os.path.join('assets', 'grafico_adesao_acumulado.png')
     if criar_grafico_barras_verticais(df_adesao_acumulado, caminho_g3, "Total de Participantes por Ramo"):
         doc.add_picture(caminho_g3, width=Inches(6.2))
-    doc.add_paragraph("Fonte: DISEG/GEARC")
 
-    # --- NOVA SEÇÃO 2.5: ADESÕES POR PATROCINADOR ---
-   # --- 2.5 Adesões por Patrocinador ---
+    # --- NOVA SEÇÃO 2.6: ADESÕES POR PATROCINADOR ---
+   # --- 2.6 Adesões por Patrocinador ---
     contador_titulo2 = 2 # Exemplo
     contador_titulo3 += 1 # Exemplo
     
@@ -366,8 +360,6 @@ def gerar_relatorio_word(dados, data_alvo):
     if criar_grafico_donut(dados.get('regime_tributacao_acumulado'), caminho_g5, "Regime de Tributação (Acumulado)"):
         doc.add_picture(caminho_g5, width=Inches(5.0))
         paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    
-    doc.add_paragraph("Fonte: DISEG/GEARC")
 
     # --- NOVA SEÇÃO 2.8: PERCENTUAL DE CONTRIBUIÇÃO ---
     contador_titulo3 += 1 # Incrementa o contador para a nova seção
@@ -445,7 +437,6 @@ def gerar_relatorio_word(dados, data_alvo):
     caminho_g6 = os.path.join('assets', 'grafico_percentual_mes.png')
     if criar_grafico_barras_agrupadas(df_mes, caminho_g6, f"Distribuição Mensal ({data_alvo.strftime('%B/%Y')})"):
         doc.add_picture(caminho_g6, width=Inches(6.2))
-    doc.add_paragraph("Fonte: DISEG/GEARC")
 
     # Gráfico 7: Acumulado
     p_legenda_g7 = doc.add_paragraph("Gráfico 7. Distribuição do percentual de contribuição (acumulado)")
@@ -453,7 +444,6 @@ def gerar_relatorio_word(dados, data_alvo):
     caminho_g7 = os.path.join('assets', 'grafico_percentual_acumulado.png')
     if criar_grafico_barras_agrupadas(df_acumulado, caminho_g7, "Distribuição Acumulada"):
         doc.add_picture(caminho_g7, width=Inches(6.2))
-    doc.add_paragraph("Fonte: DISEG/GEARC")
 
       # --- NOVA SEÇÃO 3: ARRECADAÇÃO ---
     contador_titulo2 += 1
@@ -482,7 +472,6 @@ def gerar_relatorio_word(dados, data_alvo):
     if gerar_imagem_tabela(df_arrec_tabela, caminho_t4):
         doc.add_picture(caminho_t4, width=Inches(4.0))
         doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-    doc.add_paragraph("Fonte: DISEG/GEARC")
 
     # --- Lógica do Texto e Gráfico 8 ---
     df_arrec_grafico = dados.get('arrecadacao_grafico')
@@ -520,9 +509,6 @@ def gerar_relatorio_word(dados, data_alvo):
         paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
         paragrafo_grafico.paragraph_format.space_before = Pt(0)
     
-    p_fonte_g8 = doc.add_paragraph("Fonte: DISEG/GEARC")
-    p_fonte_g8.paragraph_format.space_before = Pt(6)
-    
      # --- NOVA SEÇÃO 3.1: ARRECADAÇÃO DE CONTRIBUIÇÃO TOTAL ---
     contador_titulo2 = 3 # Agora é a seção 3
     contador_titulo3 = 1
@@ -542,8 +528,6 @@ def gerar_relatorio_word(dados, data_alvo):
     if gerar_imagem_tabela(df_arrec_formatado, caminho_t5):
         doc.add_picture(caminho_t5, width=Inches(6.2))
         # ... (código para centralizar imagem)
-    
-    doc.add_paragraph("Fonte: DISEG/GEARC")
 
     # Texto 2 (dinâmico)
     df_arrec_raw = dados.get('arrecadacao_tipo')
@@ -612,8 +596,6 @@ def gerar_relatorio_word(dados, data_alvo):
             if gerar_imagem_tabela(df_cargo_formatado, caminho_t6):
                 doc.add_picture(caminho_t6, width=Inches(6.2))
                 doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-            
-            doc.add_paragraph("Fonte: DISEG/GEARC")
 
         except Exception as e:
             print(f"Aviso: não foi possível gerar a seção de arrecadação por cargo. Erro: {e}")
@@ -644,8 +626,6 @@ def gerar_relatorio_word(dados, data_alvo):
         doc.add_picture(caminho_g9, width=Inches(6.2))
         doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    doc.add_paragraph("Fonte: DISEG/GEARC")
-
     p_legenda_g10 = doc.add_paragraph("\nGráfico 10. Distribuição do patrimônio por ramo da justiça (acumulado)")
     p_legenda_g10.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_g10 = os.path.join('assets', 'grafico_patrimonio_acumulado.png')
@@ -660,8 +640,6 @@ def gerar_relatorio_word(dados, data_alvo):
     ):
         doc.add_picture(caminho_g10, width=Inches(6.2))
         doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-    
-    doc.add_paragraph("Fonte: DISEG/GEARC")
 
      # --- NOVA SEÇÃO 3.4: CONTRIBUIÇÕES POR PATROCINADOR ---
     contador_titulo3 += 1 # Ajuste o número da seção conforme necessário
@@ -690,7 +668,6 @@ def gerar_relatorio_word(dados, data_alvo):
         df_patrocinador_formatado = formatar_tabela_patrocinador(df_patrocinador_raw.copy())
         adicionar_tabela_nativa_word(doc, df_patrocinador_formatado)
         
-
         # Fonte grudada à tabela
         p_fonte_t7 = doc.add_paragraph("Fonte: DISEG/GEARC")
         p_fonte_t7.paragraph_format.keep_with_next = True

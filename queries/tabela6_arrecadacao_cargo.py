@@ -7,17 +7,17 @@ def gerar_query(ano, mes):
         select 
             CASE
                 WHEN a.CARGO LIKE 'ANALISTA%' THEN 'ANALISTAS'
-                WHEN a.CARGO LIKE 'TÉCNICO%' THEN 'TÉCNICOS'
+                WHEN a.CARGO LIKE 'TÉCNICO%' or a.CARGO like 'tecnico'  then 'TÉCNICOS'
                 WHEN a.CARGO LIKE 'AUXILIAR%' THEN 'AUXILIARES'
                 else 'JUÍZES E MEMBROS'
             END AS CARGO,
-            COUNT(DISTINCT a.ID_PESSOA) AS QUANTIDADE_PARTICIPANTES,
+            COUNT( a.ID_PESSOA) AS QUANTIDADE_PARTICIPANTES,
             SUM(a.CONTRIB_PARTICIPANTE + a.CONTRIB_PATROCINADOR) AS TOTAL_CONTRIBUICAO
         from (
             -- Subquery para contribuições de Participante
             SELECT pe.ID_PESSOA, ff.NR_MES_REF, ff.NR_ANO_REF, c.NM_CARGO CARGO, ff.VL_CONTRIB CONTRIB_PARTICIPANTE, 0 CONTRIB_PATROCINADOR
             FROM pessoa pe 
-            LEFT JOIN hist_empresa he ON he.id_pessoa = pe.id_pessoa AND he.id_emp = pe.id_emp AND he.nr_ano_ref = (SELECT Max(he1.nr_ano_ref) FROM hist_empresa he1 WHERE he1.id_pessoa = he.id_pessoa) AND he.nr_mes_ref = (SELECT Max(he1.nr_mes_ref) FROM hist_empresa he1 WHERE he1.id_pessoa = he.id_pessoa AND he1.nr_ano_ref = (SELECT Max(he1.nr_ano_ref) FROM hist_empresa he1 WHERE he1.id_pessoa = he.id_pessoa))
+            LEFT JOIN hist_empresa he ON he.id_pessoa = pe.id_pessoa AND he.id_emp = pe.id_emp AND he.nr_ano_ref = (SELECT Max(he1.nr_ano_ref) FROM hist_empresa he1 WHERE he1.id_pessoa = he.id_pessoa) AND he.nr_mes_ref = (SELECT Max(he1.nr_mes_ref) FROM hist_empresa he1 WHERE he1.id_pessoa = he.id_pessoa AND he1.nr_ano_ref = (SELECT Max(he1.nr_ano_ref) FROM hist_empresa he1 WHERE he1.id_pessoa = he.id_pessoa)) 
             LEFT JOIN empresa_situacao es ON he.id_sit_emp = es.id_sit_emp AND he.id_emp = es.id_emp 
             LEFT JOIN empresa ep ON pe.id_emp = ep.id_emp 
             LEFT JOIN (SELECT a1.id_pessoa, a1.id_emp, a1.sg_pessoa, a1.nm_pessoa FROM pessoa a1 WHERE a1.ic_emp_patroc = 'S') emp ON emp.id_pessoa = ep.id_pessoa_emp 
@@ -29,7 +29,7 @@ def gerar_query(ano, mes):
             left join portal.dbo.participante_tipo_contribuicao ptc on ptc.id_contribuicao_trust = ff.ID_CONTRIBUICAO   
             left join CARGO c on c.ID_CARGO = pe.ID_CARGO AND c.ID_EMP = pe.ID_EMP 
             left join LOCAL LE on le.ID_LOCAL = pe.id_local 
-            WHERE 1 = 1 AND pe.IC_EMP_PATROC = 'N' AND pe.IC_PARTICIPANTE = 'S'  and ptc.tipo_contribuicao = 'NORMAL'
+            WHERE 1 = 1 AND pe.IC_EMP_PATROC = 'N' AND pe.IC_PARTICIPANTE = 'S'  and ptc.tipo_contribuicao in ('NORMAL','NORMAL - AUTOPATROCINADO','NORMAL - GR. NATALINA','NORMAL - JUROS','NORMAL - JUROS - AUTOPATROCINADO','NORMAL - JUROS - GR. NATALINA')
 
             UNION ALL
 
@@ -48,18 +48,17 @@ def gerar_query(ano, mes):
             left join portal.dbo.participante_tipo_contribuicao ptc on ptc.id_contribuicao_trust = ff.ID_CONTRIBUICAO 
             left join CARGO c on c.ID_CARGO = pe.ID_CARGO AND c.ID_EMP = pe.ID_EMP 
             left join LOCAL LE on le.ID_LOCAL = pe.id_local 
-            WHERE 1 = 1 AND pe.IC_EMP_PATROC = 'N' AND pe.IC_PARTICIPANTE = 'S'  and ptc.tipo_contribuicao = 'NORMAL'
+            WHERE 1 = 1 AND pe.IC_EMP_PATROC = 'N' AND pe.IC_PARTICIPANTE = 'S'  and ptc.tipo_contribuicao in ('NORMAL','NORMAL - AUTOPATROCINADO','NORMAL - GR. NATALINA','NORMAL - JUROS','NORMAL - JUROS - AUTOPATROCINADO','NORMAL - JUROS - GR. NATALINA')
         ) a
-        -- Filtro principal agora dinâmico
+        -- FILTRO DINÂMICO APLICADO AQUI
         where 1=1 and a.NR_ANO_REF = {ano} and a.NR_MES_REF = {mes}
         group by CASE
             WHEN a.CARGO LIKE 'ANALISTA%' THEN 'ANALISTAS'
-            WHEN a.CARGO LIKE 'TÉCNICO%' THEN 'TÉCNICOS'
+            WHEN a.CARGO LIKE 'TÉCNICO%' or a.CARGO like 'tecnico'  then 'TÉCNICOS'
             WHEN a.CARGO LIKE 'AUXILIAR%' THEN 'AUXILIARES'
             else 'JUÍZES E MEMBROS'
         END
     )
-    -- Seleção final com cálculos e nomes de colunas simples (sem acentos)
     SELECT 
         CARGO,
         (TOTAL_CONTRIBUICAO * 100.0) / NULLIF(SUM(TOTAL_CONTRIBUICAO) OVER(), 0) AS RepresentatividadeContribuicao,

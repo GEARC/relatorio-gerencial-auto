@@ -11,12 +11,19 @@ from adjustText import adjust_text
 
 
 config = imgkit.config(wkhtmltoimage=PATH_WKHTMLTOIMAGE)
+FONTE_TEXTO = "Fonte: DISEG/GEARC"
 
 def gerar_imagem_tabela(df, nome_arquivo_saida):
     if df.empty:
         print(f"DataFrame vazio, não foi possível gerar a imagem {nome_arquivo_saida}.")
         return False
     html_tabela = df.to_html(index=False, border=0)
+    html_footer = f"""
+    <div class="footer">
+        {FONTE_TEXTO}
+    </div>
+    """
+    
     css_estilo = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
@@ -43,7 +50,7 @@ def gerar_imagem_tabela(df, nome_arquivo_saida):
         }
     </style>
     """
-    html_completo = f"<!DOCTYPE html><html><head><meta charset='UTF-8'>{css_estilo}</head><body>{html_tabela}</body></html>"
+    html_completo = f"<!DOCTYPE html><html><head>{css_estilo}</head><body>{html_tabela}{html_footer}</body></html>"
     options = {'--enable-local-file-access': None, 'quality': '100', 'width': 600, 'encoding': "UTF-8", 'zoom': 1.0}
     try:
         imgkit.from_string(html_completo, nome_arquivo_saida, config=config, options=options)
@@ -57,15 +64,36 @@ def criar_grafico_piramide_etaria(df, caminho_para_salvar):
     if df.empty:
         print("DataFrame vazio, não é possível gerar o gráfico.")
         return False
-    df_pivot = df.pivot(index='Faixa_Etaria', columns='SEXO', values='QTD').fillna(0)
+        
+    # --- CORREÇÃO APLICADA AQUI ---
+    # Troca 'pivot' por 'pivot_table' com a função de agregação 'sum'.
+    # Isso garante que todas as linhas para a mesma categoria sejam somadas.
+    df_pivot = df.pivot_table(
+        index='Faixa_Etaria', 
+        columns='SEXO', 
+        values='QTD', 
+        aggfunc='sum'
+    ).fillna(0)
+    
     df_pivot = df_pivot.rename(columns={'F': 'Feminino', 'M': 'Masculino'})
     if 'Feminino' not in df_pivot: df_pivot['Feminino'] = 0
     if 'Masculino' not in df_pivot: df_pivot['Masculino'] = 0
-    ordem_correta = ['21 a 23', '24 a 26', '27 a 29', '30 a 32', '33 a 35', '36 a 38', '39 a 41','42 a 44', '45 a 47', '48 a 50', '51 a 53', '54 a 56', '57 a 59', '60 a 62','Maior que 62 anos']
+    
+    # A ordenação e o resto da lógica continuam os mesmos
+    ordem_correta = [
+        '21 a 23', '24 a 26', '27 a 29', '30 a 32', '33 a 35', 
+        '36 a 38', '39 a 41', '42 a 44', '45 a 47', '48 a 50', 
+        '51 a 53', '54 a 56', '57 a 59', '60 a 62', '63 a 65', 
+        '66 a 68', '69 a 71', '72 a 74', '75 a 77', '79 a 81', 
+        '82 a 84', '85 a 87', '88 a 90', '91 a 93', '94 a 96', 
+        '97 a 99', '100 a 102', '103 a 105', 'Maior que 105'
+    ]
     df_pivot = df_pivot.reindex(ordem_correta).dropna()
+
     if df_pivot.empty:
         print("ERRO: DataFrame ficou vazio após reindexar.")
         return False
+        
     df_pivot['Feminino'] = -df_pivot['Feminino']
     plt.style.use('seaborn-v0_8-whitegrid')
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -85,6 +113,9 @@ def criar_grafico_piramide_etaria(df, caminho_para_salvar):
     ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, pos: f'{abs(int(x)):,.0f}'.replace(',', '.')))
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=2)
     ax.spines[['top','right','left']].set_visible(False)
+
+    fig.text(0.05, 0.01, FONTE_TEXTO, ha='left', va='bottom', fontsize=11, color='#000')
+    
     plt.savefig(caminho_para_salvar, dpi=300, bbox_inches='tight')
     plt.close(fig)
     print(f"Gráfico de pirâmide gerado: {caminho_para_salvar}")
@@ -148,7 +179,6 @@ def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico, form
         )
 
     ax.set_title(titulo_grafico, fontsize=16)
-    ax.set_ylabel('Quantidade de Participantes')
     
     # Mantém os rótulos na horizontal (rotação 0)
     plt.xticks(rotation=0)
@@ -158,6 +188,10 @@ def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico, form
     
     # Ajusta o layout para garantir que os rótulos não sejam cortados
     fig.tight_layout()
+    
+    plt.subplots_adjust(bottom=0.10)
+    ax.text(0, -0.09, FONTE_TEXTO, transform=ax.transAxes,
+            ha='left', va='top', fontsize=11, color='#000')
     
     plt.savefig(caminho_para_salvar, dpi=300) # bbox_inches='tight' removido em favor de tight_layout()
     plt.close(fig)
@@ -226,6 +260,8 @@ def criar_grafico_donut(df, caminho_para_salvar, titulo_grafico):
     ax.legend(wedges, labels_legenda, title="", loc="center left", bbox_to_anchor=(1.05, 0.5), frameon=False)
     ax.set_title(titulo_grafico, fontsize=16, pad=20)
     
+    fig.text(0.05, 0.01, FONTE_TEXTO, ha='left', va='bottom', fontsize=11, color='#000')
+
     plt.savefig(caminho_para_salvar, dpi=300, bbox_inches='tight')
     plt.close(fig)
     print(f"Gráfico de donut gerado: {caminho_para_salvar}")
@@ -263,7 +299,6 @@ def criar_grafico_barras_agrupadas(df, caminho_para_salvar, titulo):
     ax.bar_label(rects1, padding=3, fmt='%.2f%%')
     ax.bar_label(rects2, padding=3, fmt='%.2f%%')
 
-    ax.set_ylabel('Percentual de Participantes')
     ax.set_title(titulo, fontsize=16)
     ax.set_xticks(x, labels)
     ax.legend()
@@ -271,6 +306,10 @@ def criar_grafico_barras_agrupadas(df, caminho_para_salvar, titulo):
     ax.set_ylim(top=ax.get_ylim()[1] * 1.15)
     fig.tight_layout()
 
+    plt.subplots_adjust(bottom=0.10)
+    ax.text(0, -0.09, FONTE_TEXTO, transform=ax.transAxes,
+            ha='left', va='top', fontsize=11, color='#000')
+    
     plt.savefig(caminho_para_salvar, dpi=300)
     plt.close(fig)
     return True
@@ -308,6 +347,10 @@ def criar_grafico_paridade(df, caminho_para_salvar, titulo_grafico):
     
     # Aumenta o limite superior para os rótulos caberem bem
     ax.set_ylim(top=ax.get_ylim()[1] * 1.1)
+
+    plt.subplots_adjust(bottom=0.10)
+    ax.text(0, -0.09, FONTE_TEXTO, transform=ax.transAxes,
+            ha='left', va='top', fontsize=11, color='#000')
 
     plt.savefig(caminho_para_salvar, dpi=300, bbox_inches='tight')
     plt.close(fig)

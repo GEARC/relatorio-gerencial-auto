@@ -8,14 +8,14 @@ pasta_principal = os.path.abspath(os.path.join(diretorio_atual, '..'))
 sys.path.insert(0, pasta_principal)
 
 # Importa APENAS a função específica que você quer testar do módulo de visualizações.
-from modules.visualizacoes import criar_grafico_donut
+from modules.visualizacoes import criar_grafico_piramide_etaria
 # Importa o pandas para ler o arquivo de dados de amostra.
 import pandas as pd
 
 print("--- Iniciando ambiente de teste de componentes ---")
 
 # --- Testando um Componente Específico: O Gráfico de Donut ---
-print("\nTestando a função 'criar_grafico_donut'...")
+print("\nTestando a função 'criar_grafico_piramide_etaria'...")
 
 try:
     # 1. Carregar Dados de Amostra
@@ -29,11 +29,11 @@ try:
 
     # 2. Definir o Caminho de Saída
     # O gráfico gerado será salvo na mesma pasta deste script de teste ('tests/').
-    caminho_saida = os.path.join(diretorio_atual, 'teste_donut.png')
+    caminho_saida = os.path.join(diretorio_atual, 'criar_grafico_piramide_etaria')
 
     # 3. Executar a Função
     # Chama apenas a função que queremos testar, passando os dados de amostra.
-    sucesso = criar_grafico_donut(df_teste, caminho_saida, "Teste do Gráfico Donut")
+    sucesso = criar_grafico_piramide_etaria(df_teste, caminho_saida, "Teste do Gráfico criar_grafico_piramide_etaria")
 
     # 4. Verificar o Resultado
     # Imprime uma mensagem de sucesso ou falha para sabermos o que aconteceu.
