@@ -162,10 +162,9 @@ def gerar_relatorio_word(dados, data_alvo):
             print(f"Aviso: Não foi possível calcular a variação do mês para o texto dinâmico. Erro: {e}")
             doc.add_paragraph(f"As ocorrências e movimentações do mês de {mes_ano_texto} estão assim distribuídas:", style='CorpoComRecuo')
         
-        p = doc.add_paragraph("Tabela 1. Evolução mensal das adesões")
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         caminho_imagem_tabela1 = os.path.join('assets', 'tabela_evolucao.png')
-        if gerar_imagem_tabela(df_evolucao_formatado, caminho_imagem_tabela1):
+        titulo_tabela1 = "Tabela 1. Evolução mensal das adesões"
+        if gerar_imagem_tabela(df_evolucao_formatado, caminho_imagem_tabela1, titulo_tabela1):
             doc.add_picture(caminho_imagem_tabela1, width=Inches(6.2))
     else:
         doc.add_paragraph("[Dados para a tabela de evolução não foram encontrados.]", style='CorpoComRecuo')
@@ -187,7 +186,9 @@ def gerar_relatorio_word(dados, data_alvo):
                 doc.add_paragraph(f"Atualmente, o percentual de participantes está representado em {percentual_masc:.2f}% de homens e {percentual_fem:.2f}% de mulheres.", style='CorpoComRecuo')
             tabela_sexo_resumo = pd.DataFrame({'SITUAÇÃO': ['Total de Participantes'], 'FEMININO': [total_fem], 'MASCULINO': [total_masc], 'TOTAL GERAL': [total_geral]})
             caminho_imagem_tabela_sexo = os.path.join('assets', 'tabela_sexo.png')
-            if gerar_imagem_tabela(tabela_sexo_resumo, caminho_imagem_tabela_sexo):
+
+            titulo_tabela0 = ""
+            if gerar_imagem_tabela(tabela_sexo_resumo, caminho_imagem_tabela_sexo, titulo_tabela0):
                  doc.add_picture(caminho_imagem_tabela_sexo, width=Inches(6.0))
         except (IndexError, KeyError) as e:
             print(f"ERRO: Não foi possível processar dados de sexo: {e}")
@@ -211,11 +212,10 @@ def gerar_relatorio_word(dados, data_alvo):
     else:
         doc.add_paragraph("A concentração de participantes está distribuída entre as idades de 36 a 44 anos.", style='CorpoComRecuo')
     
-    p = doc.add_paragraph("Gráfico 1. Distribuição de participantes por sexo e grupo de idade*")
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_grafico_piramide = os.path.join('assets', 'grafico_piramide_etaria.png')
     if df_piramide is not None:
-        if criar_grafico_piramide_etaria(df_piramide, caminho_grafico_piramide):
+        titulo_grafico1 = "Gráfico 1. Distribuição de participantes por sexo e grupo de idade*"
+        if criar_grafico_piramide_etaria(df_piramide, caminho_grafico_piramide, titulo_grafico1):
             doc.add_picture(caminho_grafico_piramide, width=Inches(6.2))
         else:
             doc.add_paragraph("[Falha ao gerar o gráfico de pirâmide etária.]")
@@ -228,15 +228,12 @@ def gerar_relatorio_word(dados, data_alvo):
     
     doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Distribuição de participantes por Cargos e Categoria", style='Título 3')
     
-    p_legenda_t2 = doc.add_paragraph("Tabela 2. Distribuição de participantes por cargo")
-    p_legenda_t2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_legenda_t2.paragraph_format.space_after = Pt(6)
-    
     df_cargos = dados.get('distribuicao_cargos')
     caminho_imagem_tabela_cargos = os.path.join('assets', 'tabela_cargos.png')
     
     if df_cargos is not None and not df_cargos.empty:
-        if gerar_imagem_tabela(df_cargos, caminho_imagem_tabela_cargos):
+        titulo_tabela2 = "Tabela 2. Distribuição de participantes por cargo"
+        if gerar_imagem_tabela(df_cargos, caminho_imagem_tabela_cargos, titulo_tabela2):
             doc.add_picture(caminho_imagem_tabela_cargos, width=Inches(4.0))
             paragrafo_imagem = doc.paragraphs[-1]
             paragrafo_imagem.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -266,17 +263,12 @@ def gerar_relatorio_word(dados, data_alvo):
         )
 
     # Gráfico 2: Mensal
-    p_legenda_g2 = doc.add_paragraph(f"Gráfico 2. Distribuição de participantes por ramo da justiça ({data_alvo.strftime('%B/%Y')})")
-    p_legenda_g2.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_g2 = os.path.join('assets', 'grafico_adesao_mes.png')
-    if criar_grafico_barras_verticais(df_adesao_mes, caminho_g2, "Adesões no Mês por Ramo"):
+    if criar_grafico_barras_verticais(df_adesao_mes, caminho_g2, f"Gráfico 2. Distribuição de participantes por ramo da justiça {mes_ano_texto}"):
         doc.add_picture(caminho_g2, width=Inches(6.2))
 
-    # Gráfico 3: Acumulado
-    p_legenda_g3 = doc.add_paragraph("Gráfico 3. Distribuição de participantes por ramo da justiça (acumulado)")
-    p_legenda_g3.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_g3 = os.path.join('assets', 'grafico_adesao_acumulado.png')
-    if criar_grafico_barras_verticais(df_adesao_acumulado, caminho_g3, "Total de Participantes por Ramo"):
+    if criar_grafico_barras_verticais(df_adesao_acumulado, caminho_g3, "Gráfico 3. Distribuição de participantes por ramo da justiça (acumulado)"):
         doc.add_picture(caminho_g3, width=Inches(6.2))
 
     # --- NOVA SEÇÃO 2.6: ADESÕES POR PATROCINADOR ---
@@ -345,19 +337,14 @@ def gerar_relatorio_word(dados, data_alvo):
     p_lei.add_run(" no momento da obtenção do benefício ou do primeiro resgate dos valores acumulados.")
     # --- FIM DA LÓGICA DE TEXTO ---
 
-    # Gráfico 4: Mensal
-    p_legenda_g4 = doc.add_paragraph(f"Gráfico 4. Distribuição regime de tributação ({data_alvo.strftime('%B/%Y')})")
-    p_legenda_g4.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_g4 = os.path.join('assets', 'grafico_tributacao_mes.png')
-    if criar_grafico_donut(df_tributacao_mes, caminho_g4, f"Regime de Tributação ({data_alvo.strftime('%B/%Y')})"):
+    if criar_grafico_donut(df_tributacao_mes, caminho_g4, f"Gráfico 4. Distribuição regime de tributação ({data_alvo.strftime('%B/%Y')})"):
         doc.add_picture(caminho_g4, width=Inches(5.0))
         paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
     # Gráfico 5: Acumulado
-    p_legenda_g5 = doc.add_paragraph("Gráfico 5. Distribuição regime de tributação (acumulado)")
-    p_legenda_g5.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_g5 = os.path.join('assets', 'grafico_tributacao_acumulado.png')
-    if criar_grafico_donut(dados.get('regime_tributacao_acumulado'), caminho_g5, "Regime de Tributação (Acumulado)"):
+    if criar_grafico_donut(dados.get('regime_tributacao_acumulado'), caminho_g5, "Gráfico 5. Distribuição regime de tributação (Acumulado)"):
         doc.add_picture(caminho_g5, width=Inches(5.0))
         paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -432,17 +419,13 @@ def gerar_relatorio_word(dados, data_alvo):
         doc.add_paragraph("[Dados insuficientes para gerar os textos descritivos.]", style='CorpoComRecuo')
 
     # Gráfico 6: Mensal
-    p_legenda_g6 = doc.add_paragraph(f"Gráfico 6. Distribuição do percentual de contribuição ({data_alvo.strftime('%B/%Y')})")
-    p_legenda_g6.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_g6 = os.path.join('assets', 'grafico_percentual_mes.png')
-    if criar_grafico_barras_agrupadas(df_mes, caminho_g6, f"Distribuição Mensal ({data_alvo.strftime('%B/%Y')})"):
+    if criar_grafico_barras_agrupadas(df_mes, caminho_g6, f"Gráfico 6. Distribuição do percentual de contribuição ({data_alvo.strftime('%B/%Y')})"):
         doc.add_picture(caminho_g6, width=Inches(6.2))
 
     # Gráfico 7: Acumulado
-    p_legenda_g7 = doc.add_paragraph("Gráfico 7. Distribuição do percentual de contribuição (acumulado)")
-    p_legenda_g7.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_g7 = os.path.join('assets', 'grafico_percentual_acumulado.png')
-    if criar_grafico_barras_agrupadas(df_acumulado, caminho_g7, "Distribuição Acumulada"):
+    if criar_grafico_barras_agrupadas(df_acumulado, caminho_g7, "Gráfico 7. Distribuição do percentual de contribuição (acumulado)"):
         doc.add_picture(caminho_g7, width=Inches(6.2))
 
       # --- NOVA SEÇÃO 3: ARRECADAÇÃO ---
@@ -466,10 +449,10 @@ def gerar_relatorio_word(dados, data_alvo):
         except Exception as e:
             print(f"Aviso: Não foi possível gerar texto dinâmico de arrecadação. Erro: {e}")
 
-    p_legenda_t4 = doc.add_paragraph("Tabela 4. Arrecadação de contribuições por mês competência")
-    p_legenda_t4.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_t4 = os.path.join('assets', 'tabela_arrecadacao.png')
-    if gerar_imagem_tabela(df_arrec_tabela, caminho_t4):
+
+    titulo_tabela4 = "Tabela 4. Arrecadação de contribuições por mês competência"
+    if gerar_imagem_tabela(df_arrec_tabela, caminho_t4, titulo_tabela4):
         doc.add_picture(caminho_t4, width=Inches(4.0))
         doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -496,14 +479,10 @@ def gerar_relatorio_word(dados, data_alvo):
         except Exception as e:
             print(f"Aviso: Não foi possível gerar texto dinâmico de paridade. Erro: {e}")
 
-    p_legenda_g8 = doc.add_paragraph("\nGráfico 8. Contribuição normal (participante e patrocinador)")
-    p_legenda_g8.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_legenda_g8.paragraph_format.space_after = Pt(6)
-
     caminho_g8 = os.path.join('assets', 'grafico_paridade.png')
     
     # --- CORREÇÃO: Chama a nova função de gráfico dedicada ---
-    if criar_grafico_paridade(df_arrec_grafico, caminho_g8, "Paridade de Contribuição"):
+    if criar_grafico_paridade(df_arrec_grafico, caminho_g8, "Gráfico 8. Contribuição normal (participante e patrocinador)"):
         doc.add_picture(caminho_g8, width=Inches(5.0))
         paragrafo_grafico = doc.paragraphs[-1]
         paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -516,16 +495,15 @@ def gerar_relatorio_word(dados, data_alvo):
     
     # Texto 1 (estático)
     doc.add_paragraph("Abaixo demonstramos a distribuição das contribuições que resultaram no total arrecadado para o mês, bem como a variação percentual em relação ao mês anterior:", style='CorpoComRecuo')
-
-    p_legenda_t5 = doc.add_paragraph("Tabela 5. Arrecadação por tipo de contribuição")
-    p_legenda_t5.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
     # Pega os dados brutos e formata para exibição
     df_arrec_raw = dados.get('arrecadacao_tipo')
     df_arrec_formatado = formatar_tabela_arrecadacao(df_arrec_raw.copy(), data_alvo)
     
     caminho_t5 = os.path.join('assets', 'tabela_arrecadacao_tipo.png')
-    if gerar_imagem_tabela(df_arrec_formatado, caminho_t5):
+    titulo_tabela5 = "Tabela 5. Arrecadação por tipo de contribuição"
+
+    if gerar_imagem_tabela(df_arrec_formatado, caminho_t5, titulo_tabela5):
         doc.add_picture(caminho_t5, width=Inches(6.2))
         # ... (código para centralizar imagem)
 
@@ -584,16 +562,13 @@ def gerar_relatorio_word(dados, data_alvo):
             # Adiciona os outros parágrafos
             doc.add_paragraph("Ressalta-se que o cenário apresentado considera apenas as contribuições normais, referentes ao mês corrente e às competências anteriores, tanto dos participantes quanto dos patrocinadores.", style='CorpoComRecuo')
             doc.add_paragraph("O detalhamento da arrecadação, bem como a quantidade de participantes por cargo, pode ser visualizado na Tabela 6.", style='CorpoComRecuo')
-
-            # Gera a imagem da tabela
-            p_legenda_t6 = doc.add_paragraph("Tabela 6. Arrecadação por cargo/representatividade (participantes patrocinados)")
-            p_legenda_t6.alignment = WD_ALIGN_PARAGRAPH.CENTER
             
             # Chama a função de formatação
             df_cargo_formatado = formatar_tabela_cargo(df_cargo_raw.copy())
             caminho_t6 = os.path.join('assets', 'tabela_arrecadacao_cargo.png')
             
-            if gerar_imagem_tabela(df_cargo_formatado, caminho_t6):
+            titulo_tabela6 = "Tabela 6. Arrecadação por cargo/representatividade (participantes patrocinados)"
+            if gerar_imagem_tabela(df_cargo_formatado, caminho_t6, titulo_tabela6):
                 doc.add_picture(caminho_t6, width=Inches(6.2))
                 doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -617,17 +592,13 @@ def gerar_relatorio_word(dados, data_alvo):
         doc.add_paragraph(texto_dinamico, style='CorpoComRecuo')
     
     # Gráfico 9: Mensal
-    p_legenda_g9 = doc.add_paragraph(f"Gráfico 9. Distribuição de contribuições por ramo do patrocinador ({data_alvo.strftime('%B/%Y')})")
-    p_legenda_g9.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_g9 = os.path.join('assets', 'grafico_contribuicao_ramo_mes.png')
     
     # Reutilizando nossa função de gráfico de barras!
-    if criar_grafico_barras_verticais(df_contrib_ramo_mes, caminho_g9, "Contribuição Mensal por Ramo", formato_label='percent_only'):
+    if criar_grafico_barras_verticais(df_contrib_ramo_mes, caminho_g9, f"Gráfico 9. Distribuição de contribuições por ramo do patrocinador {mes_ano_texto}", formato_label='percent_only'):
         doc.add_picture(caminho_g9, width=Inches(6.2))
         doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    p_legenda_g10 = doc.add_paragraph("\nGráfico 10. Distribuição do patrimônio por ramo da justiça (acumulado)")
-    p_legenda_g10.alignment = WD_ALIGN_PARAGRAPH.CENTER
     caminho_g10 = os.path.join('assets', 'grafico_patrimonio_acumulado.png')
     
     # --- CORREÇÃO APLICADA AQUI ---
@@ -635,7 +606,7 @@ def gerar_relatorio_word(dados, data_alvo):
     if criar_grafico_barras_verticais(
         dados.get('patrimonio_ramo_acumulado'), 
         caminho_g10, 
-        "", 
+        "Gráfico 10. Distribuição do patrimônio por ramo da justiça (acumulado)", 
         formato_label='percent_only' # <--- NOVO PARÂMETRO
     ):
         doc.add_picture(caminho_g10, width=Inches(6.2))
@@ -644,6 +615,13 @@ def gerar_relatorio_word(dados, data_alvo):
      # --- NOVA SEÇÃO 3.4: CONTRIBUIÇÕES POR PATROCINADOR ---
     contador_titulo3 += 1 # Ajuste o número da seção conforme necessário
     doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Contribuições por patrocinador", style='Título 3')
+
+    p_legenda_t3 = doc.add_paragraph("Tabela 7. Arrecadação e Patrimônio por patrocinador")
+    p_legenda_t3.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_legenda_t3.paragraph_format.keep_with_next = True
+    p_legenda_t3.paragraph_format.space_before = Pt(12)
+    p_legenda_t3.paragraph_format.space_after = Pt(6)
+
     
     df_patrocinador_raw = dados.get('contribuicao_patrocinador')
     
@@ -659,11 +637,6 @@ def gerar_relatorio_word(dados, data_alvo):
             style='CorpoComRecuo'
         )
 
-        # Legenda da tabela
-        p_legenda_t7 = doc.add_paragraph("Tabela 7. Arrecadação e Patrimônio por patrocinador")
-        p_legenda_t7.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_legenda_t7.paragraph_format.keep_with_next = True
-    
         # Formata e adiciona a tabela nativa
         df_patrocinador_formatado = formatar_tabela_patrocinador(df_patrocinador_raw.copy())
         adicionar_tabela_nativa_word(doc, df_patrocinador_formatado)

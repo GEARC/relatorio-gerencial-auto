@@ -13,11 +13,13 @@ from adjustText import adjust_text
 config = imgkit.config(wkhtmltoimage=PATH_WKHTMLTOIMAGE)
 FONTE_TEXTO = "Fonte: DISEG/GEARC"
 
-def gerar_imagem_tabela(df, nome_arquivo_saida):
+def gerar_imagem_tabela(df, nome_arquivo_saida, titulo_tabela):
     if df.empty:
         print(f"DataFrame vazio, não foi possível gerar a imagem {nome_arquivo_saida}.")
         return False
     html_tabela = df.to_html(index=False, border=0)
+
+    html_titulo = f"<h1>{titulo_tabela}</h1>"
     html_footer = f"""
     <div class="footer">
         {FONTE_TEXTO}
@@ -29,6 +31,15 @@ def gerar_imagem_tabela(df, nome_arquivo_saida):
         @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
         body { font-family: 'Open Sans', sans-serif; font-size: 14px; }
         table { border-collapse: collapse; width: 100%; color: #333; }
+
+         h1 { 
+            text-align: center; 
+            font-size: 14px;         /* Tamanho da fonte diminuído */
+            font-weight: normal;     /* Garante que não fique em negrito */
+            margin-bottom: 10px;
+        }
+
+
         th, td {
             border: 1px solid #E0E0E0;
             text-align: center;
@@ -50,7 +61,7 @@ def gerar_imagem_tabela(df, nome_arquivo_saida):
         }
     </style>
     """
-    html_completo = f"<!DOCTYPE html><html><head>{css_estilo}</head><body>{html_tabela}{html_footer}</body></html>"
+    html_completo = f"<!DOCTYPE html><html><head>{css_estilo}</head><body>{html_titulo}{html_tabela}{html_footer}</body></html>"
     options = {'--enable-local-file-access': None, 'quality': '100', 'width': 600, 'encoding': "UTF-8", 'zoom': 1.0}
     try:
         imgkit.from_string(html_completo, nome_arquivo_saida, config=config, options=options)
@@ -60,14 +71,13 @@ def gerar_imagem_tabela(df, nome_arquivo_saida):
         print(f"Erro ao gerar imagem da tabela: {e}")
         return False
 
-def criar_grafico_piramide_etaria(df, caminho_para_salvar):
+def criar_grafico_piramide_etaria(df, caminho_para_salvar, titulo_grafico):
     if df.empty:
         print("DataFrame vazio, não é possível gerar o gráfico.")
         return False
         
-    # --- CORREÇÃO APLICADA AQUI ---
-    # Troca 'pivot' por 'pivot_table' com a função de agregação 'sum'.
-    # Isso garante que todas as linhas para a mesma categoria sejam somadas.
+    
+
     df_pivot = df.pivot_table(
         index='Faixa_Etaria', 
         columns='SEXO', 
@@ -97,6 +107,8 @@ def criar_grafico_piramide_etaria(df, caminho_para_salvar):
     df_pivot['Feminino'] = -df_pivot['Feminino']
     plt.style.use('seaborn-v0_8-whitegrid')
     fig, ax = plt.subplots(figsize=(12, 8))
+    fig.suptitle(titulo_grafico, fontsize=11)
+    
     ax.barh(df_pivot.index, df_pivot['Feminino'], color='#9b2242', label='Feminino')
     ax.barh(df_pivot.index, df_pivot['Masculino'], color='#003366', label='Masculino')
     limite_eixo = ax.get_xlim()[1]
@@ -142,6 +154,7 @@ def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico, form
     plt.style.use('seaborn-v0_8-whitegrid')
     # --- CORREÇÃO 2: AUMENTA A LARGURA DA FIGURA ---
     fig, ax = plt.subplots(figsize=(15, 8)) # Antes era (12, 7)
+    fig.suptitle(titulo_grafico, fontsize=11)
     
     cores_por_orgao = {
         'JUSTIÇA TRABALHISTA': '#003366',
@@ -177,8 +190,6 @@ def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico, form
             texto_rotulo,
             ha='center', va='bottom', fontsize=16
         )
-
-    ax.set_title(titulo_grafico, fontsize=16)
     
     # Mantém os rótulos na horizontal (rotação 0)
     plt.xticks(rotation=0)
@@ -325,6 +336,7 @@ def criar_grafico_paridade(df, caminho_para_salvar, titulo_grafico):
     
     plt.style.use('seaborn-v0_8-whitegrid')
     fig, ax = plt.subplots(figsize=(8, 6)) # Tamanho ajustado
+    ax.set_title(titulo_grafico, fontsize=16, pad=20)
     
     # Cores para participante (laranja) e patrocinador (azul escuro)
     cores = ['#DD7E2E', '#0F406D']

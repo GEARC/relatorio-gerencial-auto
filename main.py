@@ -33,17 +33,24 @@ def solicitar_data_relatorio():
     while True:
         try:
             ano = int(input(">>> Digite o ano do relatório (ex: 2025): "))
-            if 2000 < ano < 2100: break
-            else: print("Ano inválido, por favor tente novamente.")
-        except ValueError: print("Entrada inválida. Por favor, digite um número para o ano.")
+            if 2000 < ano < 2100:
+                break
+            else:
+                print("Ano inválido, por favor tente novamente.")
+        except ValueError:
+            print("Entrada inválida. Por favor, digite um número para o ano.")
     
     while True:
         try:
             mes = int(input(">>> Digite o mês do relatório (ex: 5 para maio): "))
-            if 1 <= mes <= 12: break
-            else: print("Mês inválido, por favor digite um número de 1 a 12.")
-        except ValueError: print("Entrada inválida. Por favor, digite um número para o mês.")
+            if 1 <= mes <= 12:
+                break
+            else:
+                print("Mês inválido, por favor digite um número de 1 a 12.")
+        except ValueError:
+            print("Entrada inválida. Por favor, digite um número para o mês.")
             
+    # Garante que a função sempre retorne um objeto de data
     return datetime.date(ano, mes, 1)
 
 def main():
