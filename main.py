@@ -10,6 +10,7 @@ from config import DB_CONFIG
 from modules.relatorio import gerar_relatorio_word, converter_docx_para_pdf
 from modules.database import conectar_banco, buscar_dados
 from queries.tabela1_evolucao_adesoes import gerar_query as gerar_query_evolucao
+from queries.tabela1_evolucao_detalhes import gerar_query as gerar_query_evolucao_detalhes
 from queries.tabela_distribuicao_sexo import QUERY as query_distribuicao_sexo
 from queries.tabela2_distribuicao_cargos import gerar_query as gerar_query
 from queries.grafico1_piramide_etaria import QUERY as query_piramide_etaria
@@ -78,6 +79,10 @@ def main():
     dados_relatorio['evolucao_adesoes'] = buscar_dados(query_evolucao_dinamica, engine)
     #if not dados_relatorio['evolucao_adesoes'].empty:
         #dados_relatorio['evolucao_adesoes'].to_csv('amostra_dados_evolucao_adesoes.csv', index=False, encoding='utf-8-sig')
+
+    print("\nBuscando dados para Detalhes da Evolução das Adesões...")
+    query_evolucao_detalhes_dinamica = gerar_query_evolucao_detalhes(ano_alvo, mes_alvo)
+    dados_relatorio['evolucao_detalhes'] = buscar_dados(query_evolucao_detalhes_dinamica, engine)
     
     param_texto_data = f"{ano_alvo}{mes_alvo:02d}"
     

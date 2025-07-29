@@ -147,8 +147,11 @@ def gerar_relatorio_word(dados, data_alvo):
     doc.add_paragraph(f"{contador_titulo2}.{contador_titulo3}. Evolução das Adesões", style='Título 3')
     
     df_evolucao_raw = dados.get('evolucao_adesoes')
+    df_detalhes_raw = dados.get('evolucao_detalhes') # Pega os novos dados
+    
     if df_evolucao_raw is not None and not df_evolucao_raw.empty:
-        df_evolucao_formatado = transformar_dados_evolucao(df_evolucao_raw, data_alvo)
+        # Passa os DOIS dataframes para a função de transformação
+        df_evolucao_formatado = transformar_dados_evolucao(df_evolucao_raw, df_detalhes_raw, data_alvo)
         
         # --- LÓGICA DE TEXTO DINÂMICO ATUALIZADA ---
         try:

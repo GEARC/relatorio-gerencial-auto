@@ -1,58 +1,76 @@
 import pandas as pd
 import locale
 
-def transformar_dados_evolucao(df_raw, data_alvo):
+def transformar_dados_evolucao(df_geral_raw, df_detalhes_raw, data_alvo):
     """
-    Recebe o DataFrame no formato da consulta e o transforma
-    para o formato visual do relatório de forma dinâmica.
+    Combina os dados gerais e detalhados para montar a Tabela 1 final.
     """
-    if df_raw.empty:
+    if df_geral_raw.empty:
+        print("Aviso: DataFrame geral de evolução está vazio.")
         return pd.DataFrame()
         
     ano = data_alvo.year
     ano_anterior = ano - 1
 
-    df_raw = df_raw.set_index('situacao').drop(columns=['ordem'], errors='ignore')
-    for col in df_raw.columns:
-        df_raw[col] = pd.to_numeric(df_raw[col], errors='coerce')
-    df_raw = df_raw.fillna(0)
-    df_formatado = df_raw.T
+    # --- 1. Processa os dados GERAIS ---
+    df_geral = df_geral_raw.set_index('situacao').drop(columns=['ordem', 'total_geral'], errors='ignore')
+    for col in df_geral.columns: df_geral[col] = pd.to_numeric(df_geral[col], errors='coerce')
+    df_geral = df_geral.fillna(0).T
     
-    colunas_renomear = {
-        'PATROCINADO': 'Patrocinado', 'VINCULADO': 'Vinculado', 'BPD - SALDO': 'BPD',
-        'NO PRAZO OPÇÃO INSTITUTOS': 'No prazo opção dos institutos', 'AUTOPATROCINADO': 'Autopatrocinado',
-        'ASSISTIDO': 'Assistido'
-    }
-    df_formatado.rename(columns=colunas_renomear, inplace=True)
-
-    ordem_colunas = ['Patrocinado', 'Vinculado', 'BPD', 'No prazo opção dos institutos', 'Autopatrocinado', 'Assistido']
-    for col in ordem_colunas:
-        if col not in df_formatado.columns:
-            df_formatado[col] = 0
-    df_formatado = df_formatado[ordem_colunas]
-
-    df_formatado['Total'] = df_formatado.sum(axis=1).astype(int)
-    df_formatado.columns.name = None
-
-    # --- LÓGICA DE RENOMEAÇÃO DINÂMICA ---
-    total_geral_row = df_formatado.loc['total_geral']
-    df_formatado = df_formatado.drop('total_geral')
-
-    novos_nomes_index = {}
-    for nome_coluna in df_formatado.index:
-        if nome_coluna.startswith('saldo_'):
-            novos_nomes_index[nome_coluna] = f"Saldo {ano_anterior}"
-        elif nome_coluna.startswith('acumulado_'):
-            novos_nomes_index[nome_coluna] = f"Acumulado/{ano}"
-        else: # É uma coluna de mês, ex: 'jan_2024'
-            partes = nome_coluna.split('_')
-            novos_nomes_index[nome_coluna] = f"{partes[0]}/{partes[1]}"
-            
-    df_formatado = df_formatado.rename(index=novos_nomes_index)
-
-    df_formatado.loc['Acumulado Total'] = total_geral_row
+    novos_nomes_geral = {}
+    for idx in df_geral.index:
+        if idx.startswith('saldo_'): novos_nomes_geral[idx] = f"Saldo {ano_anterior}"
+        elif idx.startswith('acumulado_'): novos_nomes_geral[idx] = f"Acumulado/{ano}"
+        else: novos_nomes_geral[idx] = idx.replace('_', '/')
+    df_geral = df_geral.rename(index=novos_nomes_geral)
     
-    return df_formatado.reset_index().rename(columns={'index': 'Mês/Ano'})
+    # --- 2. Processa os dados de DETALHES ---
+    df_pivot_detalhes = pd.DataFrame()
+    if df_detalhes_raw is not None and not df_detalhes_raw.empty:
+        df_detalhes_raw['ANO_MES'] = pd.to_datetime(df_detalhes_raw['ANO_MES'], format='%Y%m').dt.strftime('%b/%Y').str.lower()
+        df_pivot_detalhes = df_detalhes_raw.pivot_table(
+            index='ANO_MES', columns=['SITUACAO', 'ORIGEM'], values='QTD', aggfunc='sum'
+        ).fillna(0)
+
+    # --- 3. Combina os dois DataFrames ---
+    df_combinado = pd.concat([df_geral, df_pivot_detalhes], axis=1, join='outer').fillna(0)
+    
+    # --- 4. Monta a tabela final com a estrutura correta ---
+    
+    # Define a estrutura do cabeçalho de duas linhas (MultiIndex)
+    colunas_finais = pd.MultiIndex.from_tuples([
+        ('Mês/Ano', ''), ('Patrocinado', ''), ('Vinculado', ''), ('BPD', 'Patrocinado'), ('BPD', 'Vinculado'),
+        ('Autopatrocinado', 'Patrocinado'), ('Autopatrocinado', 'Vinculado'),
+        ('No prazo opção dos institutos', ''), ('Assistido', '')
+    ])
+    
+    # Cria o DataFrame final com a estrutura correta
+    df_final = pd.DataFrame(index=df_combinado.index, columns=colunas_finais)
+
+    # Preenche o DataFrame final com os dados combinados
+    df_final[('Patrocinado', '')] = df_combinado.get('PATROCINADO', 0)
+    df_final[('Vinculado', '')] = df_combinado.get('VINCULADO', 0)
+    df_final[('BPD', 'Patrocinado')] = df_combinado.get(('BPD', 'Patrocinado'), 0)
+    df_final[('BPD', 'Vinculado')] = df_combinado.get(('BPD', 'Vinculado'), 0)
+    df_final[('Autopatrocinado', 'Patrocinado')] = df_combinado.get(('AUTOPATROCINADO', 'Patrocinado'), 0)
+    df_final[('Autopatrocinado', 'Vinculado')] = df_combinado.get(('AUTOPATROCINADO', 'Vinculado'), 0)
+    df_final[('No prazo opção dos institutos', '')] = df_combinado.get('NO PRAZO OPÇÃO INSTITUTOS', 0)
+    df_final[('Assistido', '')] = df_combinado.get('ASSISTIDO', 0)
+    
+    df_final = df_final.fillna(0).astype(int)
+    
+    # Adiciona a coluna Total
+    df_final[('Total', '')] = df_final.sum(axis=1)
+
+    # Adiciona a linha de Acumulado Total
+    acumulado_total_row = df_final.loc[f"Saldo {ano_anterior}"] + df_final.loc[f"Acumulado/{ano}"]
+    df_final.loc['Acumulado Total'] = acumulado_total_row
+    
+    # Prepara o DataFrame para ser usado pela função que gera a imagem
+    df_final.reset_index(inplace=True)
+    df_final.columns = [' '.join(col).strip() for col in df_final.columns.values]
+    
+    return df_final.rename(columns={'Mês/Ano ': 'Mês/Ano'})
 
 def formatar_tabela_arrecadacao(df, data_alvo):
     """Formata o DataFrame da Tabela 5 para exibição."""
