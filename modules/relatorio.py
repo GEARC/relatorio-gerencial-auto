@@ -186,8 +186,23 @@ def gerar_relatorio_word(dados, data_alvo):
             if total_geral > 0:
                 percentual_masc = (total_masc / total_geral) * 100
                 percentual_fem = (total_fem / total_geral) * 100
-                doc.add_paragraph(f"Atualmente, o percentual de participantes está representado em {percentual_masc:.2f}% de homens e {percentual_fem:.2f}% de mulheres.", style='CorpoComRecuo')
-            tabela_sexo_resumo = pd.DataFrame({'SITUAÇÃO': ['Total de Participantes'], 'FEMININO': [total_fem], 'MASCULINO': [total_masc], 'TOTAL GERAL': [total_geral]})
+                # Formata os percentuais com vírgula como separador decimal (ex: 12,34%)
+                percentual_masc_str = f"{percentual_masc:.2f}".replace('.', ',')
+                percentual_fem_str = f"{percentual_fem:.2f}".replace('.', ',')
+                doc.add_paragraph(f"Atualmente, o percentual de participantes está representado em {percentual_masc_str}% de homens e {percentual_fem_str}% de mulheres.", style='CorpoComRecuo')
+            # Formata os valores numéricos com ponto como separador de milhares e sem casas decimais
+            def fmt_milhar(v):
+                try:
+                    return f"{int(v):,}".replace(',', '.')
+                except Exception:
+                    return str(v)
+
+            tabela_sexo_resumo = pd.DataFrame({
+                'SITUAÇÃO': ['Total de Participantes'],
+                'FEMININO': [fmt_milhar(total_fem)],
+                'MASCULINO': [fmt_milhar(total_masc)],
+                'TOTAL GERAL': [fmt_milhar(total_geral)]
+            })
             caminho_imagem_tabela_sexo = os.path.join('assets', 'tabela_sexo.png')
 
             titulo_tabela0 = ""
@@ -259,9 +274,20 @@ def gerar_relatorio_word(dados, data_alvo):
         ramo_maior_total = df_adesao_acumulado.iloc[0, 0]
         numero_maior_total = int(df_adesao_acumulado.iloc[0, 1])
 
+        # Formata os números com ponto como separador de milhares (ex: 36.640)
+        try:
+            numero_maior_adesao_fmt = f"{numero_maior_adesao:,}".replace(',', '.')
+        except Exception:
+            numero_maior_adesao_fmt = str(numero_maior_adesao)
+
+        try:
+            numero_maior_total_fmt = f"{numero_maior_total:,}".replace(',', '.')
+        except Exception:
+            numero_maior_total_fmt = str(numero_maior_total)
+
         doc.add_paragraph(
-            f"No mês de {data_alvo.strftime('%B/%Y')}, o (a) {ramo_maior_adesao} obteve o maior número de adesões ({numero_maior_adesao}) e, desde o "
-            f"início do funcionamento da Funpresp-Jud, a {ramo_maior_total} permanece com o maior número de participantes ({numero_maior_total}).",
+            f"No mês de {data_alvo.strftime('%B/%Y')}, o (a) {ramo_maior_adesao} obteve o maior número de adesões ({numero_maior_adesao_fmt}) e, desde o "
+            f"início do funcionamento da Funpresp-Jud, a {ramo_maior_total} permanece com o maior número de participantes ({numero_maior_total_fmt}).",
             style='CorpoComRecuo'
         )
 
@@ -397,21 +423,26 @@ def gerar_relatorio_word(dados, data_alvo):
             perc_patro_85_acum = (qtd_patro_85_acum / total_patro_acum) * 100 if total_patro_acum > 0 else 0
 
             # Parágrafo 2 (Vinculados)
+            # Formata percentuais com vírgula como separador decimal (ex: 12,34%)
+            perc_vinc_65_mes_str = f"{perc_vinc_65_mes:.2f}".replace('.', ',')
+            perc_vinc_65_acum_str = f"{perc_vinc_65_acum:.2f}".replace('.', ',')
             texto_vinculados = (
                 f"Para os participantes vinculados a melhor opção é a escolha do percentual mínimo (6,5%), "
                 f"com o objetivo de aproveitar a isenção da taxa de carregamento sobre a contribuição facultativa. "
-                f"Em {data_alvo.strftime('%B/%Y')}, {perc_vinc_65_mes:.2f}% dos participantes vinculados optaram pelo percentual de 6,5% "
-                f"e a opção pelo percentual mínimo chega a {perc_vinc_65_acum:.2f}% da preferência dos participantes "
+                f"Em {data_alvo.strftime('%B/%Y')}, {perc_vinc_65_mes_str}% dos participantes vinculados optaram pelo percentual de 6,5% "
+                f"e a opção pelo percentual mínimo chega a {perc_vinc_65_acum_str}% da preferência dos participantes "
                 f"desde o início do funcionamento do plano."
             )
             doc.add_paragraph(texto_vinculados, style='CorpoComRecuo')
 
             # Parágrafo 3 (Patrocinados)
+            perc_patro_85_mes_str = f"{perc_patro_85_mes:.2f}".replace('.', ',')
+            perc_patro_85_acum_str = f"{perc_patro_85_acum:.2f}".replace('.', ',')
             texto_patrocinados = (
                 f"Para os participantes patrocinados a opção mais vantajosa é contribuir com o percentual máximo (8,5%), "
                 f"obtendo a contrapartida máxima da contribuição patronal. Em {data_alvo.strftime('%B/%Y')}, "
-                f"{perc_patro_85_mes:.2f}% dos participantes optaram pelo percentual máximo. Já no acumulado, "
-                f"desde o início do plano, temos {perc_patro_85_acum:.2f}% dos participantes com o percentual de 8,5%."
+                f"{perc_patro_85_mes_str}% dos participantes optaram pelo percentual máximo. Já no acumulado, "
+                f"desde o início do plano, temos {perc_patro_85_acum_str}% dos participantes com o percentual de 8,5%."
             )
             doc.add_paragraph(texto_patrocinados, style='CorpoComRecuo')
 
@@ -527,9 +558,11 @@ def gerar_relatorio_word(dados, data_alvo):
             maior_impacto = df_tipos.loc[df_tipos['dif_abs'].idxmax()]
             tipo_maior_impacto = maior_impacto['Contribuicao'].lower()
 
+            # Formata a variação com vírgula como separador decimal (ex: 12,34%)
+            variacao_formatada = f"{abs(variacao_total):.2f}".replace('.', ',')
             texto_dinamico2 = (
                 f"Com base na tabela acima, observa-se que o total arrecadado em {data_alvo.strftime('%B de %Y')} "
-                f"apresentou {status_variacao} de {abs(variacao_total):.2f}% em relação a { (data_alvo - pd.DateOffset(months=1)).strftime('%B de %Y')}. "
+                f"apresentou {status_variacao} de {variacao_formatada}% em relação a { (data_alvo - pd.DateOffset(months=1)).strftime('%B de %Y')}. "
                 f"Essa variação foi impulsionada, sobretudo, pela arrecadação da contribuição {tipo_maior_impacto}."
             )
             doc.add_paragraph(texto_dinamico2, style='CorpoComRecuo')
@@ -554,6 +587,8 @@ def gerar_relatorio_word(dados, data_alvo):
             # Extrai os valores para o texto dinâmico (exemplo)
             juizes_media = df_ordenado[df_ordenado['CARGO'] == 'JUÍZES E MEMBROS']['ContribuicaoMedia'].iloc[0]
             analistas_media = df_ordenado[df_ordenado['CARGO'] == 'ANALISTAS']['ContribuicaoMedia'].iloc[0]
+            auxiliares_media = df_ordenado[df_ordenado['CARGO'] == 'AUXILIARES']['ContribuicaoMedia'].iloc[0]
+            tecnicos_media = df_ordenado[df_ordenado['CARGO'] == 'TÉCNICOS']['ContribuicaoMedia'].iloc[0]
             
             # Constrói o texto dinâmico (exemplo)
             texto_p1 = doc.add_paragraph(style='CorpoComRecuo')
@@ -561,6 +596,10 @@ def gerar_relatorio_word(dados, data_alvo):
             texto_p1.add_run(f"{locale.currency(juizes_media, grouping=True)}").bold = True
             texto_p1.add_run(", seguidos pelos Analistas, com ")
             texto_p1.add_run(f"{locale.currency(analistas_media, grouping=True)}.").bold = True
+            texto_p1.add_run("Na sequência, aparecem os Auxiliares, com média de ")
+            texto_p1.add_run(f"{locale.currency(auxiliares_media, grouping=True)}.").bold = True
+            texto_p1.add_run(", e os Técnicos, com")
+            texto_p1.add_run(f"{locale.currency(tecnicos_media, grouping=True)}.").bold = True
             
             # Adiciona os outros parágrafos
             doc.add_paragraph("Ressalta-se que o cenário apresentado considera apenas as contribuições normais, referentes ao mês corrente e às competências anteriores, tanto dos participantes quanto dos patrocinadores.", style='CorpoComRecuo')
@@ -618,27 +657,26 @@ def gerar_relatorio_word(dados, data_alvo):
      # --- NOVA SEÇÃO 3.4: CONTRIBUIÇÕES POR PATROCINADOR ---
     contador_titulo3 += 1 # Ajuste o número da seção conforme necessário
     doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Contribuições por patrocinador", style='Título 3')
-
-    p_legenda_t3 = doc.add_paragraph("Tabela 7. Arrecadação e Patrimônio por patrocinador")
-    p_legenda_t3.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_legenda_t3.paragraph_format.keep_with_next = True
-    p_legenda_t3.paragraph_format.space_before = Pt(12)
-    p_legenda_t3.paragraph_format.space_after = Pt(6)
-
     
     df_patrocinador_raw = dados.get('contribuicao_patrocinador')
     
     if df_patrocinador_raw is not None and not df_patrocinador_raw.empty:
         # Texto dinâmico
-        patrocinador_mes = df_patrocinador_raw.iloc[0]['Patrocinador']
-        df_sorted_acumulado = df_patrocinador_raw.sort_values(by='contribuicoes_acumuladas', ascending=False)
-        patrocinador_acumulado = df_sorted_acumulado.iloc[0]['Patrocinador']
+        patrocinador_mes = df_patrocinador_raw.iloc[0]['EMPRESA']
+        df_sorted_acumulado = df_patrocinador_raw.sort_values(by='CONTRIB_TOTAL', ascending=False)
+        patrocinador_acumulado = df_sorted_acumulado.iloc[0]['EMPRESA']
         
         doc.add_paragraph(
             f"Em {data_alvo.strftime('%B/%Y')}, o {patrocinador_mes} ficou no topo do ranking na contribuição mensal e "
             f"o {patrocinador_acumulado} continua com o maior patrimônio por patrocinador.",
             style='CorpoComRecuo'
         )
+
+        p_legenda_t3 = doc.add_paragraph("Tabela 7. Arrecadação e Patrimônio por patrocinador")
+        p_legenda_t3.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_legenda_t3.paragraph_format.keep_with_next = True
+        p_legenda_t3.paragraph_format.space_before = Pt(12)
+        p_legenda_t3.paragraph_format.space_after = Pt(6)
 
         # Formata e adiciona a tabela nativa
         df_patrocinador_formatado = formatar_tabela_patrocinador(df_patrocinador_raw.copy())

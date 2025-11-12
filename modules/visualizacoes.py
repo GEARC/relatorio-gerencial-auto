@@ -177,13 +177,20 @@ def criar_grafico_barras_verticais(df, caminho_para_salvar, titulo_grafico, form
     for bar in bars:
         altura = bar.get_height()
         percentual = (altura / total_geral) * 100
-        
+
+        # Formata valor absoluto com ponto como separador de milhar
+        try:
+            valor_formatado = f"{int(altura):,}".replace(',', '.')
+        except Exception:
+            valor_formatado = str(int(altura))
+
         # Define o texto do rótulo com base no parâmetro
         if formato_label == 'percent_only':
             texto_rotulo = f'{percentual:.2f}%'.replace('.', ',')
         else: # Padrão: mostra percentual e valor absoluto
-            texto_rotulo = f'{percentual:.2f}%\n{int(altura)}'.replace('.', ',')
-            
+            # percentual com vírgula como separador decimal e valor com ponto de milhar
+            texto_rotulo = f"{percentual:.2f}%\n{valor_formatado}".replace('.', ',', 1).replace('%,', '%,')
+
         ax.text(
             bar.get_x() + bar.get_width() / 2,
             altura,
