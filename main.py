@@ -74,6 +74,40 @@ def salvar_queries_em_txt(queries_dict, caminho_saida, data_alvo):
         print(f"ERRO ao salvar o arquivo de queries: {e}")
         return False
 
+def salvar_tabelas_em_excel(dados_relatorio, caminho_saida, data_alvo):
+    """Salva os DataFrames das tabelas do relatório em um arquivo Excel."""
+    
+    # Mapeia as chaves de dados para nomes de abas mais amigáveis
+    mapa_tabelas = {
+        'evolucao_adesoes': 'T1 - Evolução Adesões',
+        'evolucao_detalhes': 'T1 - Detalhes Evolução',
+        'distribuicao_sexo': 'T - Distribuição por Sexo',
+        'distribuicao_cargos': 'T2 - Distribuição Cargos',
+        'adesoes_patrocinador': 'T3 - Adesões Patrocinador',
+        'arrecadacao_tabela': 'T4 - Arrecadação Competência',
+        'arrecadacao_tipo': 'T5 - Arrecadação por Tipo',
+        'arrecadacao_cargo': 'T6 - Arrecadação por Cargo',
+        'contribuicao_patrocinador': 'T7 - Contribuição Patrocinador'
+    }
+
+    nome_arquivo = f"tabelas_relatorio_{data_alvo.strftime('%Y-%m')}.xlsx"
+    caminho_completo = os.path.join(caminho_saida, nome_arquivo)
+
+    try:
+        with pd.ExcelWriter(caminho_completo, engine='xlsxwriter') as writer:
+            print("\nIniciando a geração da planilha Excel com as tabelas...")
+            for chave_dados, nome_aba in mapa_tabelas.items():
+                if chave_dados in dados_relatorio and not dados_relatorio[chave_dados].empty:
+                    # Limita o nome da aba a 31 caracteres, que é o limite do Excel
+                    nome_aba_curto = nome_aba[:31]
+                    dados_relatorio[chave_dados].to_excel(writer, sheet_name=nome_aba_curto, index=False)
+                    print(f" -> Aba '{nome_aba_curto}' salva.")
+        print(f"\nPlanilha com as tabelas salva com sucesso em: {caminho_completo}")
+        return True
+    except Exception as e:
+        print(f"ERRO ao salvar a planilha Excel: {e}")
+        return False
+
 def main():
     """Função principal que orquestra a automação do relatório."""
     print("--- Automação do Relatório Gerencial ---")
@@ -213,7 +247,13 @@ def main():
             # Salva o arquivo de texto com as queries
             salvar_queries_em_txt(queries_executadas, caminho_saida_relatorio, data_alvo)
             
+            # Salva a planilha Excel com as tabelas
+            salvar_tabelas_em_excel(dados_relatorio, caminho_saida_relatorio, data_alvo)
+
             # Converte o DOCX para PDF
+            # Inicializa o COM para a thread atual para evitar erros de "chamada rejeitada"
+            # ao interagir com o Word em alguns ambientes.
+            pythoncom.CoInitialize()
             converter_docx_para_pdf(nome_arquivo_docx)
 
     except PermissionError as e:
