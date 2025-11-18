@@ -4,6 +4,7 @@ import urllib
 import datetime
 import locale
 import os
+import sys
 import win32com.client
 import pythoncom
 from config import DB_CONFIG
@@ -53,7 +54,7 @@ def solicitar_data_relatorio():
     # Garante que a função sempre retorne um objeto de data
     return datetime.date(ano, mes, 1)
 
-def salvar_queries_em_txt(queries_dict, caminho_saida, data_alvo):
+def salvar_queries_em_txt(queries_dict, caminho_saida, data_alvo, log_callback=print):
     """Salva um dicionário de queries SQL em um arquivo de texto."""
     
     # Define o nome do arquivo e o caminho completo
@@ -68,13 +69,13 @@ def salvar_queries_em_txt(queries_dict, caminho_saida, data_alvo):
                 f.write("--------------------------------------------------\n")
                 f.write(query)
                 f.write("\n\n\n")
-        print(f"Arquivo de queries salvo com sucesso em: {caminho_completo}")
-        return True
+        log_callback(f"Arquivo de queries salvo com sucesso em: {caminho_completo}")
+        return caminho_completo
     except Exception as e:
-        print(f"ERRO ao salvar o arquivo de queries: {e}")
-        return False
+        log_callback(f"ERRO ao salvar o arquivo de queries: {e}")
+        return None
 
-def salvar_tabelas_em_excel(dados_relatorio, caminho_saida, data_alvo):
+def salvar_tabelas_em_excel(dados_relatorio, caminho_saida, data_alvo, log_callback=print):
     """Salva os DataFrames das tabelas do relatório em um arquivo Excel."""
     
     # Mapeia as chaves de dados para nomes de abas mais amigáveis
@@ -95,100 +96,103 @@ def salvar_tabelas_em_excel(dados_relatorio, caminho_saida, data_alvo):
 
     try:
         with pd.ExcelWriter(caminho_completo, engine='xlsxwriter') as writer:
-            print("\nIniciando a geração da planilha Excel com as tabelas...")
+            log_callback("\nIniciando a geração da planilha Excel com as tabelas...")
             for chave_dados, nome_aba in mapa_tabelas.items():
                 if chave_dados in dados_relatorio and not dados_relatorio[chave_dados].empty:
                     # Limita o nome da aba a 31 caracteres, que é o limite do Excel
                     nome_aba_curto = nome_aba[:31]
                     dados_relatorio[chave_dados].to_excel(writer, sheet_name=nome_aba_curto, index=False)
-                    print(f" -> Aba '{nome_aba_curto}' salva.")
-        print(f"\nPlanilha com as tabelas salva com sucesso em: {caminho_completo}")
-        return True
+                    log_callback(f" -> Aba '{nome_aba_curto}' salva.")
+        log_callback(f"\nPlanilha com as tabelas salva com sucesso em: {caminho_completo}")
+        return caminho_completo
     except Exception as e:
-        print(f"ERRO ao salvar a planilha Excel: {e}")
-        return False
+        log_callback(f"ERRO ao salvar a planilha Excel: {e}")
+        return None
 
-def main():
-    """Função principal que orquestra a automação do relatório."""
-    print("--- Automação do Relatório Gerencial ---")
-    
-    data_alvo = solicitar_data_relatorio()
+def executar_geracao_relatorio(ano, mes, log_callback=print):
+    """
+    Executa todo o processo de geração de relatórios.
+    :param ano: O ano do relatório.
+    :param mes: O mês do relatório.
+    :param log_callback: Uma função para registrar mensagens de progresso.
+    """
+    data_alvo = datetime.date(ano, mes, 1)
     ano_alvo = data_alvo.year
     mes_alvo = data_alvo.month
     
-    print(f"\nGerando relatório para o período de {data_alvo.strftime('%B de %Y')}...")
+    log_callback(f"Gerando relatório para o período de {data_alvo.strftime('%B de %Y')}...")
     
     engine = None
+    caminhos_arquivos = {}
     try:
-        engine = conectar_banco()
-        if engine is None: return
+        engine = conectar_banco(log_callback)
 
         dados_relatorio = {}
         queries_executadas = {}
 
         param_texto_data = f"{ano_alvo}{mes_alvo:02d}"
         
-        print("\nBuscando dados para Evolução das Adesões...")
+        log_callback("Buscando dados para Evolução das Adesões...")
         query_evolucao_dinamica = gerar_query_evolucao(ano_alvo, mes_alvo)
         queries_executadas['Tabela 1 - Evolução das Adesões'] = query_evolucao_dinamica
-        dados_relatorio['evolucao_adesoes'] = buscar_dados(query_evolucao_dinamica, engine)
+        dados_relatorio['evolucao_adesoes'] = buscar_dados(query_evolucao_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para Detalhes da Evolução das Adesões...")
+        log_callback("Buscando dados para Detalhes da Evolução das Adesões...")
         query_evolucao_detalhes_dinamica = gerar_query_evolucao_detalhes(ano_alvo, mes_alvo)
         queries_executadas['Tabela 1 - Detalhes da Evolução'] = query_evolucao_detalhes_dinamica
-        dados_relatorio['evolucao_detalhes'] = buscar_dados(query_evolucao_detalhes_dinamica, engine)
+        dados_relatorio['evolucao_detalhes'] = buscar_dados(query_evolucao_detalhes_dinamica, engine, log_callback)
         
-        print("\nBuscando dados para Distribuição por Sexo...")
+        log_callback("Buscando dados para Distribuição por Sexo...")
         query_sexo_dinamica = query_distribuicao_sexo.replace('?', f"'{param_texto_data}'")
         queries_executadas['Tabela - Distribuição por Sexo'] = query_sexo_dinamica
-        dados_relatorio['distribuicao_sexo'] = buscar_dados(query_sexo_dinamica, engine)
+        dados_relatorio['distribuicao_sexo'] = buscar_dados(query_sexo_dinamica, engine, log_callback)
         
-        print("\nBuscando dados para o Gráfico de Pirâmide Etária...")
+        log_callback("Buscando dados para o Gráfico de Pirâmide Etária...")
         query_piramide_dinamica = query_piramide_etaria.replace('?', f"'{param_texto_data}'")
         queries_executadas['Gráfico 1 - Pirâmide Etária'] = query_piramide_dinamica
-        dados_relatorio['piramide_etaria'] = buscar_dados(query_piramide_dinamica, engine)
+        dados_relatorio['piramide_etaria'] = buscar_dados(query_piramide_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para Distribuição por Cargos...")
+        log_callback("Buscando dados para Distribuição por Cargos...")
         query_cargos_dinamica = gerar_query(ano_alvo, mes_alvo)
         queries_executadas['Tabela 2 - Distribuição por Cargos'] = query_cargos_dinamica
-        dados_relatorio['distribuicao_cargos'] = buscar_dados(query_cargos_dinamica, engine)
+        dados_relatorio['distribuicao_cargos'] = buscar_dados(query_cargos_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para Gráfico de Adesão Mensal por Ramo...")
+        log_callback("Buscando dados para Gráfico de Adesão Mensal por Ramo...")
         query_g2_dinamica = gerar_query_g2_ramo_mes(ano_alvo, mes_alvo)
         queries_executadas['Gráfico 2 - Adesão Mensal por Ramo'] = query_g2_dinamica
-        dados_relatorio['adesao_ramo_mes'] = buscar_dados(query_g2_dinamica, engine)
+        dados_relatorio['adesao_ramo_mes'] = buscar_dados(query_g2_dinamica, engine, log_callback)
         
-        print("\nBuscando dados para Gráfico de Adesão Acumulada por Ramo...")
+        log_callback("Buscando dados para Gráfico de Adesão Acumulada por Ramo...")
         query_g3_dinamica = gerar_query_g3_ramo_acumulado(ano_alvo, mes_alvo)
         queries_executadas['Gráfico 3 - Adesão Acumulada por Ramo'] = query_g3_dinamica
-        dados_relatorio['adesao_ramo_acumulado'] = buscar_dados(query_g3_dinamica, engine)
+        dados_relatorio['adesao_ramo_acumulado'] = buscar_dados(query_g3_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para Adesões por Patrocinador...")
+        log_callback("Buscando dados para Adesões por Patrocinador...")
         query_patrocinador_dinamica = gerar_query_patrocinador(ano_alvo, mes_alvo)
         queries_executadas['Tabela 3 - Adesões por Patrocinador'] = query_patrocinador_dinamica
-        dados_relatorio['adesoes_patrocinador'] = buscar_dados(query_patrocinador_dinamica, engine)
+        dados_relatorio['adesoes_patrocinador'] = buscar_dados(query_patrocinador_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para o Gráfico Mensal de Regime de Tributação...")
+        log_callback("Buscando dados para o Gráfico Mensal de Regime de Tributação...")
         query_g4_dinamica = gerar_query_g4_tributacao(ano_alvo, mes_alvo)
         queries_executadas['Gráfico 4 - Tributação (Mês)'] = query_g4_dinamica
-        dados_relatorio['regime_tributacao_mes'] = buscar_dados(query_g4_dinamica, engine)
+        dados_relatorio['regime_tributacao_mes'] = buscar_dados(query_g4_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para o Gráfico de Regime de Tributação...")
+        log_callback("Buscando dados para o Gráfico de Regime de Tributação...")
         query_g5_dinamica = gerar_query_g5_tributacao(ano_alvo, mes_alvo)
         queries_executadas['Gráfico 5 - Tributação (Acumulado)'] = query_g5_dinamica
-        dados_relatorio['regime_tributacao_acumulado'] = buscar_dados(query_g5_dinamica, engine)
+        dados_relatorio['regime_tributacao_acumulado'] = buscar_dados(query_g5_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para o Gráfico Mensal de Percentual de Contribuição...")
+        log_callback("Buscando dados para o Gráfico Mensal de Percentual de Contribuição...")
         query_g6_dinamica = gerar_query_g6(ano_alvo, mes_alvo)
         queries_executadas['Gráfico 6 - Percentual de Contribuição (Mês)'] = query_g6_dinamica
-        dados_relatorio['percentual_contrib_mes'] = buscar_dados(query_g6_dinamica, engine)
+        dados_relatorio['percentual_contrib_mes'] = buscar_dados(query_g6_dinamica, engine, log_callback)
         
-        print("\nBuscando dados para o Gráfico Acumulado de Percentual de Contribuição...")
+        log_callback("Buscando dados para o Gráfico Acumulado de Percentual de Contribuição...")
         query_g7_dinamica = gerar_query_g7(ano_alvo, mes_alvo)
         queries_executadas['Gráfico 7 - Percentual de Contribuição (Acumulado)'] = query_g7_dinamica
-        dados_relatorio['percentual_contrib_acumulado'] = buscar_dados(query_g7_dinamica, engine)
+        dados_relatorio['percentual_contrib_acumulado'] = buscar_dados(query_g7_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para a Tabela de Arrecadação...")
+        log_callback("Buscando dados para a Tabela de Arrecadação...")
         # Query otimizada para a Tabela 4.
         # Em vez de duas varreduras na tabela, fazemos uma única varredura e usamos CASE.
         query_t4_dinamica = f"""
@@ -203,71 +207,85 @@ def main():
         GROUP BY CASE WHEN hc.NR_ANO_REF = {ano_alvo} AND hc.NR_MES_REF = {mes_alvo} THEN 'Mês Atual' ELSE 'Outras Competências' END;
         """
         queries_executadas['Tabela 4 - Arrecadação por Competência'] = query_t4_dinamica.strip()
-        dados_relatorio['arrecadacao_tabela'] = buscar_dados(query_t4_dinamica, engine)
+        dados_relatorio['arrecadacao_tabela'] = buscar_dados(query_t4_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para o Gráfico de Paridade...")
+        log_callback("Buscando dados para o Gráfico de Paridade...")
         query_g8_dinamica = gerar_query_grafico8(ano_alvo, mes_alvo)
         queries_executadas['Gráfico 8 - Paridade Contribuição Normal'] = query_g8_dinamica
-        dados_relatorio['arrecadacao_grafico'] = buscar_dados(query_g8_dinamica, engine)
+        dados_relatorio['arrecadacao_grafico'] = buscar_dados(query_g8_dinamica, engine, log_callback)
         
-        print("\nBuscando dados para a Tabela de Arrecadação por Tipo...")
+        log_callback("Buscando dados para a Tabela de Arrecadação por Tipo...")
         query_t5_dinamica = gerar_query_tabela5(ano_alvo, mes_alvo)
         queries_executadas['Tabela 5 - Arrecadação por Tipo'] = query_t5_dinamica
-        dados_relatorio['arrecadacao_tipo'] = buscar_dados(query_t5_dinamica, engine)
+        dados_relatorio['arrecadacao_tipo'] = buscar_dados(query_t5_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para a Tabela de Arrecadação por Cargo...")
+        log_callback("Buscando dados para a Tabela de Arrecadação por Cargo...")
         query_t6_dinamica = gerar_query_tabela6(ano_alvo, mes_alvo)
         queries_executadas['Tabela 6 - Arrecadação por Cargo'] = query_t6_dinamica
-        dados_relatorio['arrecadacao_cargo'] = buscar_dados(query_t6_dinamica, engine)
+        dados_relatorio['arrecadacao_cargo'] = buscar_dados(query_t6_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para o Gráfico de Contribuição Mensal por Ramo...")
+        log_callback("Buscando dados para o Gráfico de Contribuição Mensal por Ramo...")
         query_g9_dinamica = gerar_query_g9(ano_alvo, mes_alvo)
         queries_executadas['Gráfico 9 - Contribuição por Ramo (Mês)'] = query_g9_dinamica
-        dados_relatorio['contribuicao_ramo_mes'] = buscar_dados(query_g9_dinamica, engine)
+        dados_relatorio['contribuicao_ramo_mes'] = buscar_dados(query_g9_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para o Gráfico de Patrimônio Acumulado por Ramo...")
+        log_callback("Buscando dados para o Gráfico de Patrimônio Acumulado por Ramo...")
         query_g10_dinamica = gerar_query_g10(ano_alvo, mes_alvo)
         queries_executadas['Gráfico 10 - Patrimônio por Ramo (Acumulado)'] = query_g10_dinamica
-        dados_relatorio['patrimonio_ramo_acumulado'] = buscar_dados(query_g10_dinamica, engine)
+        dados_relatorio['patrimonio_ramo_acumulado'] = buscar_dados(query_g10_dinamica, engine, log_callback)
 
-        print("\nBuscando dados para Contribuições por Patrocinador...")
+        log_callback("Buscando dados para Contribuições por Patrocinador...")
         query_t7_dinamica = gerar_query_tabela7(ano_alvo, mes_alvo)
         queries_executadas['Tabela 7 - Contribuição por Patrocinador'] = query_t7_dinamica
-        dados_relatorio['contribuicao_patrocinador'] = buscar_dados(query_t7_dinamica, engine)
+        dados_relatorio['contribuicao_patrocinador'] = buscar_dados(query_t7_dinamica, engine, log_callback)
         #if not dados_relatorio[''].empty:
             #dados_relatorio[''].to_csv('amostra_dados_.csv', index=False, encoding='utf-8-sig')
            
             
-        nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo)
+        nome_arquivo_docx = gerar_relatorio_word(dados_relatorio, data_alvo, log_callback)
         
         if nome_arquivo_docx:
             # Pega o diretório onde o DOCX foi salvo para usar para o TXT
             caminho_saida_relatorio = os.path.dirname(nome_arquivo_docx)
             
             # Salva o arquivo de texto com as queries
-            salvar_queries_em_txt(queries_executadas, caminho_saida_relatorio, data_alvo)
+            caminho_txt = salvar_queries_em_txt(queries_executadas, caminho_saida_relatorio, data_alvo, log_callback)
+            if caminho_txt: caminhos_arquivos['txt'] = caminho_txt
             
             # Salva a planilha Excel com as tabelas
-            salvar_tabelas_em_excel(dados_relatorio, caminho_saida_relatorio, data_alvo)
+            caminho_excel = salvar_tabelas_em_excel(dados_relatorio, caminho_saida_relatorio, data_alvo, log_callback)
+            if caminho_excel: caminhos_arquivos['excel'] = caminho_excel
 
             # Converte o DOCX para PDF
             # Inicializa o COM para a thread atual para evitar erros de "chamada rejeitada"
             # ao interagir com o Word em alguns ambientes.
             pythoncom.CoInitialize()
-            converter_docx_para_pdf(nome_arquivo_docx)
+            caminho_pdf = converter_docx_para_pdf(nome_arquivo_docx, log_callback)
+            if caminho_pdf: caminhos_arquivos['pdf'] = caminho_pdf
+        
+        log_callback("\n--- Processo finalizado com sucesso! ---")
+        return caminhos_arquivos
 
     except PermissionError as e:
-        print(f"\nERRO DE PERMISSÃO: {e}")
-        print("Verifique se o arquivo de relatório (.docx) não está aberto no Microsoft Word ou em outro programa.")
-        print("Feche o arquivo e tente executar o script novamente.")
+        log_callback(f"\nERRO DE PERMISSÃO: {e}")
+        log_callback("Verifique se o arquivo de relatório (.docx) não está aberto no Microsoft Word ou em outro programa.")
+        log_callback("Feche o arquivo e tente executar o script novamente.")
     except Exception as e:
-        print(f"\nOcorreu um erro inesperado: {e}")
+        log_callback(f"\nOcorreu um erro inesperado: {e}")
     finally:
         if engine:
             engine.dispose()
-            print("\nConexão com o banco de dados fechada.")
+            log_callback("Conexão com o banco de dados fechada.")
+    return caminhos_arquivos
 
-    print("\n--- Processo finalizado com sucesso! ---")
+def main():
+    """Função principal que orquestra a automação do relatório via linha de comando."""
+    print("--- Automação do Relatório Gerencial (Modo Linha de Comando) ---")
+    
+    data_alvo = solicitar_data_relatorio()
+    
+    # Chama a função principal de geração com os dados de entrada
+    executar_geracao_relatorio(data_alvo.year, data_alvo.month)
 
 if __name__ == "__main__":
     try:

@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 import urllib
 from config import DB_CONFIG
 
-def conectar_banco():
+def conectar_banco(log_callback=print):
     """Estabelece e retorna um 'engine' do SQLAlchemy."""
     try:
         params = urllib.parse.quote_plus(
@@ -13,15 +13,15 @@ def conectar_banco():
         )
         engine = create_engine(f"mssql+pyodbc:///?odbc_connect={params}")
         engine.connect().close()
-        print("Conexão bem-sucedida!")
+        log_callback("Conexão bem-sucedida!")
         return engine
     except Exception as e:
-        print(f"Erro ao conectar: {e}")
+        log_callback(f"Erro ao conectar: {e}")
         return None
 
 # --- FUNÇÃO SIMPLIFICADA ---
 # Removemos o argumento 'params' pois não será mais usado
-def buscar_dados(query, engine, params=None):
+def buscar_dados(query, engine, log_callback=print, params=None):
     """
     Executa uma query e retorna os dados como um DataFrame pandas.
     Agora aceita um argumento 'params' opcional.
@@ -29,8 +29,8 @@ def buscar_dados(query, engine, params=None):
     try:
         # A função read_sql agora usa o argumento 'params' que foi passado
         df = pd.read_sql(query, engine, params=params)
-        print(f"Consulta executada: {len(df)} linhas retornadas.")
+        log_callback(f"Consulta executada: {len(df)} linhas retornadas.")
         return df
     except Exception as e:
-        print(f"Erro na consulta: {e}")
+        log_callback(f"Erro na consulta: {e}")
         return pd.DataFrame()

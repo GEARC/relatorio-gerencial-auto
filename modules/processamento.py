@@ -25,8 +25,9 @@ def transformar_dados_evolucao(df_geral_raw, df_detalhes_raw, data_alvo):
         else:
             # Correção para o formato do mês (ex: 'set' em vez de 'sep')
             partes = idx.split('_')
-            if len(partes) > 1 and partes[0] == 'sep':
-                partes[0] = 'set'
+            if len(partes) > 1:
+                if partes[0] == 'sep': partes[0] = 'set'
+                if partes[0] == 'aug': partes[0] = 'ago' # Adiciona a regra para agosto
             novos_nomes_geral[idx] = '/'.join(partes)
     df_geral = df_geral.rename(index=novos_nomes_geral)
     
@@ -259,6 +260,7 @@ def formatar_tabela_patrocinador(df):
 
             has_comma = s.str.contains(',', regex=False)
             has_dot = s.str.contains('\.', regex=False)
+            has_dot = s.str.contains('.', regex=False)
 
             # Caso com vírgula decimal típico do português
             s_pt = s.where(has_comma, None)

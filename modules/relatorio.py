@@ -1,5 +1,6 @@
 import os
 import datetime
+import tempfile
 import locale
 import win32com.client
 import pythoncom
@@ -15,6 +16,7 @@ from docx.enum.table import WD_ALIGN_VERTICAL
 
 # Importa as funções dos outros módulos que serão usadas aqui
 from modules.visualizacoes import gerar_imagem_tabela, criar_grafico_piramide_etaria, criar_grafico_barras_verticais, criar_grafico_donut, criar_grafico_barras_agrupadas, criar_grafico_paridade
+from modules.utils import resource_path # Importa a função do novo arquivo de utilidades
 from modules.processamento import transformar_dados_evolucao, formatar_tabela_arrecadacao, formatar_tabela_cargo, formatar_tabela_patrocinador
 
 def garantir_estilos(doc):
@@ -110,20 +112,25 @@ def adicionar_tabela_nativa_word(documento, df):
                 if is_total_row:
                     run.font.bold = True
 
-def gerar_relatorio_word(dados, data_alvo):
+def gerar_relatorio_word(dados, data_alvo, log_callback=print):
     """Gera o documento Word completo com todas as seções."""
+    
+    # --- CRIAÇÃO DE PASTA DE ASSETS TEMPORÁRIA ---
+    # Garante que o app .exe encontre onde salvar e ler as imagens.
+    assets_dir = os.path.join(tempfile.gettempdir(), "relatorio_gerencial_assets")
+    os.makedirs(assets_dir, exist_ok=True)
  # --- LÓGICA DE TEMPLATE DINÂMICO ---
     ano_str = data_alvo.strftime('%Y')
     mes_str = data_alvo.strftime('%m')
     nome_template_especifico = f"template_{mes_str}_{ano_str}.docx"
-    caminho_template_especifico = os.path.join('templates', ano_str, nome_template_especifico)
-    template_padrao = os.path.join('templates', 'template.docx')
+    caminho_template_especifico = resource_path(os.path.join('templates', ano_str, nome_template_especifico))
+    template_padrao = resource_path(os.path.join('templates', 'template.docx'))
     caminho_template_usado = caminho_template_especifico if os.path.exists(caminho_template_especifico) else template_padrao
-    print(f"Usando template: {caminho_template_usado}")
+    log_callback(f"Usando template: {caminho_template_usado}")
     try:
         doc = Document(caminho_template_usado)
     except Exception as e:
-        print(f"Erro fatal ao abrir o template '{caminho_template_usado}'. Erro: {e}")
+        log_callback(f"Erro fatal ao abrir o template '{caminho_template_usado}'. Erro: {e}")
         return None
     
     garantir_estilos(doc)
@@ -162,10 +169,10 @@ def gerar_relatorio_word(dados, data_alvo):
             texto_dinamico = f"Com as movimentações ocorridas no mês de {mes_ano_texto}, houve a entrada de {aumento_participantes} participantes na base. As ocorrências estão assim distribuídas:"
             doc.add_paragraph(texto_dinamico, style='CorpoComRecuo')
         except (KeyError, IndexError, Exception) as e:
-            print(f"Aviso: Não foi possível calcular a variação do mês para o texto dinâmico. Erro: {e}")
+            log_callback(f"Aviso: Não foi possível calcular a variação do mês para o texto dinâmico. Erro: {e}")
             doc.add_paragraph(f"As ocorrências e movimentações do mês de {mes_ano_texto} estão assim distribuídas:", style='CorpoComRecuo')
         
-        caminho_imagem_tabela1 = os.path.join('assets', 'tabela_evolucao.png')
+        caminho_imagem_tabela1 = os.path.join(assets_dir, 'tabela_evolucao.png')
         titulo_tabela1 = "Tabela 1. Evolução mensal das adesões"
         if gerar_imagem_tabela(df_evolucao_formatado, caminho_imagem_tabela1, titulo_tabela1):
             doc.add_picture(caminho_imagem_tabela1, width=Inches(6.2))
@@ -203,13 +210,13 @@ def gerar_relatorio_word(dados, data_alvo):
                 'MASCULINO': [fmt_milhar(total_masc)],
                 'TOTAL GERAL': [fmt_milhar(total_geral)]
             })
-            caminho_imagem_tabela_sexo = os.path.join('assets', 'tabela_sexo.png')
+            caminho_imagem_tabela_sexo = os.path.join(assets_dir, 'tabela_sexo.png')
 
             titulo_tabela0 = ""
             if gerar_imagem_tabela(tabela_sexo_resumo, caminho_imagem_tabela_sexo, titulo_tabela0):
                  doc.add_picture(caminho_imagem_tabela_sexo, width=Inches(6.0))
         except (IndexError, KeyError) as e:
-            print(f"ERRO: Não foi possível processar dados de sexo: {e}")
+            log_callback(f"ERRO: Não foi possível processar dados de sexo: {e}")
             doc.add_paragraph("[Dados de distribuição por sexo em formato inesperado.]", style='CorpoComRecuo')
     else:
         doc.add_paragraph("[Dados de distribuição por sexo não encontrados.]", style='CorpoComRecuo')
@@ -225,12 +232,12 @@ def gerar_relatorio_word(dados, data_alvo):
             texto_concentracao = f"A maior concentração de participantes está distribuída entre as idades de {maior_faixa}."
             doc.add_paragraph(texto_concentracao, style='CorpoComRecuo')
         except Exception as e:
-            print(f"Erro ao calcular a maior faixa etária: {e}")
+            log_callback(f"Erro ao calcular a maior faixa etária: {e}")
             doc.add_paragraph(f"{texto_concentracao}", style='CorpoComRecuo')
     else:
         doc.add_paragraph("A concentração de participantes está distribuída entre as idades de 36 a 44 anos.", style='CorpoComRecuo')
     
-    caminho_grafico_piramide = os.path.join('assets', 'grafico_piramide_etaria.png')
+    caminho_grafico_piramide = os.path.join(assets_dir, 'grafico_piramide_etaria.png')
     if df_piramide is not None:
         titulo_grafico1 = "Gráfico 1. Distribuição de participantes por sexo e grupo de idade*"
         if criar_grafico_piramide_etaria(df_piramide, caminho_grafico_piramide, titulo_grafico1):
@@ -247,7 +254,7 @@ def gerar_relatorio_word(dados, data_alvo):
     doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Distribuição de participantes por Cargos e Categoria", style='Título 3')
     
     df_cargos = dados.get('distribuicao_cargos')
-    caminho_imagem_tabela_cargos = os.path.join('assets', 'tabela_cargos.png')
+    caminho_imagem_tabela_cargos = os.path.join(assets_dir, 'tabela_cargos.png')
     
     if df_cargos is not None and not df_cargos.empty:
         titulo_tabela2 = "Tabela 2. Distribuição de participantes por cargo"
@@ -292,11 +299,11 @@ def gerar_relatorio_word(dados, data_alvo):
         )
 
     # Gráfico 2: Mensal
-    caminho_g2 = os.path.join('assets', 'grafico_adesao_mes.png')
+    caminho_g2 = os.path.join(assets_dir, 'grafico_adesao_mes.png')
     if criar_grafico_barras_verticais(df_adesao_mes, caminho_g2, f"Gráfico 2. Distribuição de participantes por ramo da justiça {mes_ano_texto}"):
         doc.add_picture(caminho_g2, width=Inches(6.2))
 
-    caminho_g3 = os.path.join('assets', 'grafico_adesao_acumulado.png')
+    caminho_g3 = os.path.join(assets_dir, 'grafico_adesao_acumulado.png')
     if criar_grafico_barras_verticais(df_adesao_acumulado, caminho_g3, "Gráfico 3. Distribuição de participantes por ramo da justiça (acumulado)"):
         doc.add_picture(caminho_g3, width=Inches(6.2))
 
@@ -351,7 +358,7 @@ def gerar_relatorio_word(dados, data_alvo):
             doc.add_paragraph(texto_dinamico, style='CorpoComRecuo')
 
         except Exception as e:
-            print(f"Aviso: Não foi possível gerar o texto dinâmico de tributação. Erro: {e}")
+            log_callback(f"Aviso: Não foi possível gerar o texto dinâmico de tributação. Erro: {e}")
     
     # Adiciona o segundo parágrafo, que é estático
     p_lei = doc.add_paragraph(style='CorpoComRecuo')
@@ -366,13 +373,13 @@ def gerar_relatorio_word(dados, data_alvo):
     p_lei.add_run(" no momento da obtenção do benefício ou do primeiro resgate dos valores acumulados.")
     # --- FIM DA LÓGICA DE TEXTO ---
 
-    caminho_g4 = os.path.join('assets', 'grafico_tributacao_mes.png')
+    caminho_g4 = os.path.join(assets_dir, 'grafico_tributacao_mes.png')
     if criar_grafico_donut(df_tributacao_mes, caminho_g4, f"Gráfico 4. Distribuição regime de tributação ({data_alvo.strftime('%B/%Y')})"):
         doc.add_picture(caminho_g4, width=Inches(5.0))
         paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
     # Gráfico 5: Acumulado
-    caminho_g5 = os.path.join('assets', 'grafico_tributacao_acumulado.png')
+    caminho_g5 = os.path.join(assets_dir, 'grafico_tributacao_acumulado.png')
     if criar_grafico_donut(dados.get('regime_tributacao_acumulado'), caminho_g5, "Gráfico 5. Distribuição regime de tributação (Acumulado)"):
         doc.add_picture(caminho_g5, width=Inches(5.0))
         paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -447,18 +454,18 @@ def gerar_relatorio_word(dados, data_alvo):
             doc.add_paragraph(texto_patrocinados, style='CorpoComRecuo')
 
         except Exception as e:
-            print(f"Aviso: não foi possível gerar o texto dinâmico de percentuais. Erro: {e}")
+            log_callback(f"Aviso: não foi possível gerar o texto dinâmico de percentuais. Erro: {e}")
             doc.add_paragraph("[Não foi possível gerar os textos descritivos para esta seção.]", style='CorpoComRecuo')
     else:
         doc.add_paragraph("[Dados insuficientes para gerar os textos descritivos.]", style='CorpoComRecuo')
 
     # Gráfico 6: Mensal
-    caminho_g6 = os.path.join('assets', 'grafico_percentual_mes.png')
+    caminho_g6 = os.path.join(assets_dir, 'grafico_percentual_mes.png')
     if criar_grafico_barras_agrupadas(df_mes, caminho_g6, f"Gráfico 6. Distribuição do percentual de contribuição ({data_alvo.strftime('%B/%Y')})"):
         doc.add_picture(caminho_g6, width=Inches(6.2))
 
     # Gráfico 7: Acumulado
-    caminho_g7 = os.path.join('assets', 'grafico_percentual_acumulado.png')
+    caminho_g7 = os.path.join(assets_dir, 'grafico_percentual_acumulado.png')
     if criar_grafico_barras_agrupadas(df_acumulado, caminho_g7, "Gráfico 7. Distribuição do percentual de contribuição (acumulado)"):
         doc.add_picture(caminho_g7, width=Inches(6.2))
 
@@ -481,9 +488,9 @@ def gerar_relatorio_word(dados, data_alvo):
             # Formata a coluna de contribuição como moeda
             df_arrec_tabela['CONTRIBUIÇÃO'] = df_arrec_tabela['CONTRIBUIÇÃO'].apply(lambda x: f'R$ {x:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.'))
         except Exception as e:
-            print(f"Aviso: Não foi possível gerar texto dinâmico de arrecadação. Erro: {e}")
+            log_callback(f"Aviso: Não foi possível gerar texto dinâmico de arrecadação. Erro: {e}")
 
-    caminho_t4 = os.path.join('assets', 'tabela_arrecadacao.png')
+    caminho_t4 = os.path.join(assets_dir, 'tabela_arrecadacao.png')
 
     titulo_tabela4 = "Tabela 4. Arrecadação de contribuições por mês competência"
     if gerar_imagem_tabela(df_arrec_tabela, caminho_t4, titulo_tabela4):
@@ -511,9 +518,9 @@ def gerar_relatorio_word(dados, data_alvo):
             p_paridade.add_run(". Grande parte desse valor se deve ao repasse realizado por um dos órgãos apenas da contribuição dos participantes, sem o correspondente aporte do patrocinador.")
 
         except Exception as e:
-            print(f"Aviso: Não foi possível gerar texto dinâmico de paridade. Erro: {e}")
+            log_callback(f"Aviso: Não foi possível gerar texto dinâmico de paridade. Erro: {e}")
 
-    caminho_g8 = os.path.join('assets', 'grafico_paridade.png')
+    caminho_g8 = os.path.join(assets_dir, 'grafico_paridade.png')
     
     # --- CORREÇÃO: Chama a nova função de gráfico dedicada ---
     if criar_grafico_paridade(df_arrec_grafico, caminho_g8, "Gráfico 8. Contribuição normal (participante e patrocinador)"):
@@ -534,7 +541,7 @@ def gerar_relatorio_word(dados, data_alvo):
     df_arrec_raw = dados.get('arrecadacao_tipo')
     df_arrec_formatado = formatar_tabela_arrecadacao(df_arrec_raw.copy(), data_alvo)
     
-    caminho_t5 = os.path.join('assets', 'tabela_arrecadacao_tipo.png')
+    caminho_t5 = os.path.join(assets_dir, 'tabela_arrecadacao_tipo.png')
     titulo_tabela5 = "Tabela 5. Arrecadação por tipo de contribuição"
 
     if gerar_imagem_tabela(df_arrec_formatado, caminho_t5, titulo_tabela5):
@@ -568,7 +575,7 @@ def gerar_relatorio_word(dados, data_alvo):
             doc.add_paragraph(texto_dinamico2, style='CorpoComRecuo')
 
         except Exception as e:
-            print(f"Aviso: não foi possível gerar o texto dinâmico da Tabela 5. Erro: {e}")
+            log_callback(f"Aviso: não foi possível gerar o texto dinâmico da Tabela 5. Erro: {e}")
 
     contador_titulo2 = 3 # Agora é a seção 3
     contador_titulo3 += 1
@@ -607,7 +614,7 @@ def gerar_relatorio_word(dados, data_alvo):
             
             # Chama a função de formatação
             df_cargo_formatado = formatar_tabela_cargo(df_cargo_raw.copy())
-            caminho_t6 = os.path.join('assets', 'tabela_arrecadacao_cargo.png')
+            caminho_t6 = os.path.join(assets_dir, 'tabela_arrecadacao_cargo.png')
             
             titulo_tabela6 = "Tabela 6. Arrecadação por cargo/representatividade (participantes patrocinados)"
             if gerar_imagem_tabela(df_cargo_formatado, caminho_t6, titulo_tabela6):
@@ -615,7 +622,7 @@ def gerar_relatorio_word(dados, data_alvo):
                 doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         except Exception as e:
-            print(f"Aviso: não foi possível gerar a seção de arrecadação por cargo. Erro: {e}")
+            log_callback(f"Aviso: não foi possível gerar a seção de arrecadação por cargo. Erro: {e}")
 
      # --- NOVA SEÇÃO 3.3: CONTRIBUIÇÕES POR RAMO DA JUSTIÇA ---
     contador_titulo3 += 1 # Incrementa para o próximo número
@@ -634,14 +641,14 @@ def gerar_relatorio_word(dados, data_alvo):
         doc.add_paragraph(texto_dinamico, style='CorpoComRecuo')
     
     # Gráfico 9: Mensal
-    caminho_g9 = os.path.join('assets', 'grafico_contribuicao_ramo_mes.png')
+    caminho_g9 = os.path.join(assets_dir, 'grafico_contribuicao_ramo_mes.png')
     
     # Reutilizando nossa função de gráfico de barras!
     if criar_grafico_barras_verticais(df_contrib_ramo_mes, caminho_g9, f"Gráfico 9. Distribuição de contribuições por ramo do patrocinador {mes_ano_texto}", formato_label='percent_only'):
         doc.add_picture(caminho_g9, width=Inches(6.2))
         doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    caminho_g10 = os.path.join('assets', 'grafico_patrimonio_acumulado.png')
+    caminho_g10 = os.path.join(assets_dir, 'grafico_patrimonio_acumulado.png')
     
     # --- CORREÇÃO APLICADA AQUI ---
     # Chama a mesma função, mas com o novo parâmetro para mostrar apenas a porcentagem
@@ -695,13 +702,15 @@ def gerar_relatorio_word(dados, data_alvo):
         9: '09setembro', 10: '10outubro', 11: '11novembro', 12: '12dezembro'
     }
     nome_pasta_mes = mapa_mes_pasta.get(data_alvo.month)
-    
-    # 2. Constrói o caminho completo da pasta (ex: outputs/2025/05maio)
-    # Assumindo que você também queira uma pasta para o ano. Se não, remova ano_str.
+
+    # 2. Define o diretório base de saída na pasta "Documentos" do usuário
+    base_output_dir = os.path.join(os.path.expanduser('~'), 'Documents', 'RelatoriosGerenciais')
+
+    # 3. Constrói o caminho completo da pasta (ex: C:\Users\user\Documents\RelatoriosGerenciais\2025\09setembro)
     ano_str = str(data_alvo.year)
-    caminho_saida = os.path.join('outputs', ano_str, nome_pasta_mes)
-    
-    # 3. Cria a pasta e subpastas se elas não existirem
+    caminho_saida = os.path.join(base_output_dir, ano_str, nome_pasta_mes)
+
+    # 4. Cria a pasta e subpastas se elas não existirem
     os.makedirs(caminho_saida, exist_ok=True)
     
     # 4. Define o nome final do arquivo e o caminho completo
@@ -710,18 +719,18 @@ def gerar_relatorio_word(dados, data_alvo):
     
     # Salva o documento no caminho dinâmico
     doc.save(caminho_completo_arquivo)
-    print(f"\nRelatório salvo com sucesso em: {caminho_completo_arquivo}")
+    log_callback(f"\nRelatório salvo com sucesso em: {caminho_completo_arquivo}")
     
     # Retorna o caminho completo para a conversão de PDF
     return caminho_completo_arquivo
 
-def converter_docx_para_pdf(caminho_docx):
+def converter_docx_para_pdf(caminho_docx, log_callback=print):
     """Converte um arquivo .docx para .pdf usando o Microsoft Word."""
     pythoncom.CoInitialize()
     try:
         word = win32com.client.Dispatch("Word.Application"); word.visible = False
         doc_path = os.path.abspath(caminho_docx); pdf_path = os.path.splitext(doc_path)[0] + ".pdf"
         doc = word.Documents.Open(doc_path); doc.SaveAs(pdf_path, FileFormat=17); doc.Close(); word.Quit()
-        print(f"Arquivo convertido para PDF: {pdf_path}"); return True
-    except Exception as e: print(f"Erro ao converter para PDF: {e}"); return False
+        log_callback(f"Arquivo convertido para PDF: {pdf_path}"); return pdf_path
+    except Exception as e: log_callback(f"Erro ao converter para PDF: {e}"); return None
     finally: pythoncom.CoUninitialize()
