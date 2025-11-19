@@ -1,10 +1,12 @@
 import pandas as pd
+import datetime
 import locale
 
 
 def transformar_dados_evolucao(df_geral_raw, df_detalhes_raw, data_alvo):
     """
-    Combina os dados gerais e detalhados para montar a Tabela 1 final.
+    Processa os dados da consulta unificada para montar a Tabela 1 final.
+    O df_detalhes_raw não é mais necessário, mas é mantido na assinatura por compatibilidade.
     """
     if df_geral_raw.empty:
         print("Aviso: DataFrame geral de evolução está vazio.")
@@ -15,81 +17,96 @@ def transformar_dados_evolucao(df_geral_raw, df_detalhes_raw, data_alvo):
 
     # --- 1. Processa os dados GERAIS ---
     df_geral = df_geral_raw.set_index('situacao').drop(columns=['ordem', 'total_geral'], errors='ignore')
-    for col in df_geral.columns: df_geral[col] = pd.to_numeric(df_geral[col], errors='coerce')
-    df_geral = df_geral.fillna(0).T
+    df_geral_saldo = df_geral.apply(pd.to_numeric, errors='coerce').fillna(0)
+
+    # --- LÓGICA DE CÁLCULO DA VARIAÇÃO MENSAL ---
+    # A query retorna o saldo acumulado em cada coluna 'mes_XX'.
+    # Precisamos calcular a diferença (delta) entre um mês e o anterior.
+    df_geral_variacao = df_geral_saldo.copy()
+    mes_cols = sorted([col for col in df_geral_variacao.columns if col.startswith('mes_')])
+    
+    if mes_cols:
+        # A variação do primeiro mês é a diferença em relação ao saldo anterior.
+        df_geral_variacao[mes_cols[0]] = df_geral_variacao[mes_cols[0]] - df_geral_variacao[f'saldo_{ano_anterior}']
+        
+        # Para os meses subsequentes, a variação é a diferença para o saldo acumulado do mês anterior.
+        for i in range(len(mes_cols) - 1, 0, -1):
+            col_atual = mes_cols[i]
+            col_anterior = mes_cols[i-1]
+            df_geral_variacao[col_atual] = df_geral_saldo[col_atual] - df_geral_saldo[col_anterior]
+
+    df_final = df_geral_variacao.T # Transpõe o DataFrame para o formato de processamento
     
     novos_nomes_geral = {}
-    for idx in df_geral.index:
+    for idx in df_final.index:
         if idx.startswith('saldo_'): novos_nomes_geral[idx] = f"Saldo {ano_anterior}"
-        elif idx.startswith('acumulado_'): novos_nomes_geral[idx] = f"Acumulado/{ano}"
+        elif idx.startswith('acumulado_'): novos_nomes_geral[idx] = f"Acumulado/{ano}" # Mantido por segurança
+        elif idx == 'acumulado_ano_corrente': novos_nomes_geral[idx] = f"Acumulado/{ano}"
+        elif idx.startswith('mes_'):
+            try:
+                num_mes = int(idx.split('_')[1])
+                nome_mes_ano = datetime.date(ano, num_mes, 1).strftime('%b/%Y').lower()
+                novos_nomes_geral[idx] = nome_mes_ano
+            except (ValueError, IndexError):
+                novos_nomes_geral[idx] = idx # Mantém o nome original se falhar
         else:
-            # Correção para o formato do mês (ex: 'set' em vez de 'sep')
-            partes = idx.split('_')
-            if len(partes) > 1:
-                if partes[0] == 'sep': partes[0] = 'set'
-                if partes[0] == 'aug': partes[0] = 'ago' # Adiciona a regra para agosto
-            novos_nomes_geral[idx] = '/'.join(partes)
-    df_geral = df_geral.rename(index=novos_nomes_geral)
+            novos_nomes_geral[idx] = idx
+    df_final = df_final.rename(index=novos_nomes_geral)
     
-    # --- 2. Processa os dados de DETALHES ---
-    df_pivot_detalhes = pd.DataFrame()
-    if df_detalhes_raw is not None and not df_detalhes_raw.empty:
-        df_detalhes_raw['ANO_MES'] = pd.to_datetime(df_detalhes_raw['ANO_MES'], format='%Y%m').dt.strftime('%b/%Y').str.lower()
-        df_pivot_detalhes = df_detalhes_raw.pivot_table(
-            index='ANO_MES', columns=['SITUACAO', 'ORIGEM'], values='QTD', aggfunc='sum'
-        ).fillna(0)
-
-    # --- 3. Combina os dois DataFrames ---
-    df_combinado = pd.concat([df_geral, df_pivot_detalhes], axis=1, join='outer').fillna(0)
-    
-    # --- 4. Monta a tabela final com a estrutura correta ---
-    
-    # Define a estrutura do cabeçalho de duas linhas (MultiIndex)
+    # --- 2. Monta a tabela final com a estrutura correta ---
     colunas_finais = pd.MultiIndex.from_tuples([
         ('Mês/Ano', ''), ('Patrocinado', ''), ('Vinculado', ''), ('BPD', 'Patrocinado'), ('BPD', 'Vinculado'),
         ('Autopatrocinado', 'Patrocinado'), ('Autopatrocinado', 'Vinculado'),
         ('No prazo opção dos institutos', ''), ('Assistido', '')
     ])
     
-    # Cria o DataFrame final com a estrutura correta
-    df_final = pd.DataFrame(index=df_combinado.index, columns=colunas_finais)
-
-    # Preenche o DataFrame final com os dados combinados
-    df_final[('Patrocinado', '')] = df_combinado.get('PATROCINADO', 0)
-    df_final[('Vinculado', '')] = df_combinado.get('VINCULADO', 0)
-    df_final[('BPD', 'Patrocinado')] = df_combinado.get(('BPD', 'Patrocinado'), 0)
-    df_final[('BPD', 'Vinculado')] = df_combinado.get(('BPD', 'Vinculado'), 0)
-    df_final[('Autopatrocinado', 'Patrocinado')] = df_combinado.get(('AUTOPATROCINADO', 'Patrocinado'), 0)
-    df_final[('Autopatrocinado', 'Vinculado')] = df_combinado.get(('AUTOPATROCINADO', 'Vinculado'), 0)
-    df_final[('No prazo opção dos institutos', '')] = df_combinado.get('NO PRAZO OPÇÃO INSTITUTOS', 0)
-    df_final[('Assistido', '')] = df_combinado.get('ASSISTIDO', 0)
+    df_tabela_final = pd.DataFrame(index=df_final.index, columns=colunas_finais)
+    df_tabela_final[('Mês/Ano', '')] = df_final.index # Preenche a primeira coluna com os nomes dos meses
+    df_tabela_final[('Patrocinado', '')] = df_final.get('PATROCINADO', 0)
+    df_tabela_final[('Vinculado', '')] = df_final.get('VINCULADO', 0)
+    df_tabela_final[('BPD', 'Patrocinado')] = df_final.get('BPD (Patrocinado)', 0)
+    df_tabela_final[('BPD', 'Vinculado')] = df_final.get('BPD (Vinculado)', 0)
+    df_tabela_final[('Autopatrocinado', 'Patrocinado')] = df_final.get('Autopatrocinado (Patrocinado)', 0)
+    df_tabela_final[('Autopatrocinado', 'Vinculado')] = df_final.get('Autopatrocinado (Vinculado)', 0)
+    df_tabela_final[('No prazo opção dos institutos', '')] = df_final.get('NO PRAZO OPÇÃO INSTITUTOS', 0)
+    df_tabela_final[('Assistido', '')] = df_final.get('ASSISTIDO', 0)
     
-    # Correção para o FutureWarning do Pandas
-    df_final = df_final.fillna(0).infer_objects(copy=False).astype(int)
+    # Preenche valores nulos com 0
+    df_tabela_final = df_tabela_final.fillna(0)
+
+    # Converte para inteiro apenas as colunas numéricas, ignorando a coluna 'Mês/Ano'
+    colunas_numericas = [col for col in df_tabela_final.columns if col != ('Mês/Ano', '')]
+    for col in colunas_numericas:
+        df_tabela_final[col] = df_tabela_final[col].astype(int)
     
     # Adiciona a coluna Total
-    df_final[('Total', '')] = df_final.sum(axis=1)
+    df_tabela_final[('Total', '')] = df_tabela_final.sum(axis=1, numeric_only=True)
 
     # Adiciona a linha de Acumulado Total
-    acumulado_total_row = df_final.loc[f"Saldo {ano_anterior}"] + df_final.loc[f"Acumulado/{ano}"]
-    df_final.loc['Acumulado Total'] = acumulado_total_row
+    # Soma apenas as colunas numéricas para evitar erro de concatenação de string
+    colunas_numericas_com_total = [col for col in df_tabela_final.columns if col != ('Mês/Ano', '')]
+    saldo_anterior = df_tabela_final.loc[f"Saldo {ano_anterior}", colunas_numericas_com_total]
+    acumulado_ano = df_tabela_final.loc[f"Acumulado/{ano}", colunas_numericas_com_total]
+    acumulado_total_row = saldo_anterior + acumulado_ano
+    df_tabela_final.loc['Acumulado Total'] = acumulado_total_row
+    df_tabela_final.loc['Acumulado Total', ('Mês/Ano', '')] = 'Acumulado Total'
+
+    # Garante que todas as colunas numéricas sejam inteiras após adicionar a linha de total
+    colunas_numericas_final = [col for col in df_tabela_final.columns if col != ('Mês/Ano', '')]
+    for col in colunas_numericas_final:
+        df_tabela_final[col] = pd.to_numeric(df_tabela_final[col], errors='coerce').fillna(0).astype(int)
     
     # Prepara o DataFrame para ser usado pela função que gera a imagem
-    df_final.reset_index(inplace=True)
-    df_final.columns = [' '.join(col).strip() for col in df_final.columns.values]
+    df_tabela_final.reset_index(inplace=True)
+    df_tabela_final.columns = [' '.join(col).strip() for col in df_tabela_final.columns.values]
     
-    return df_final.rename(columns={'Mês/Ano ': 'Mês/Ano'})
+    return df_tabela_final.rename(columns={'Mês/Ano ': 'Mês/Ano'})
 
 
 def formatar_tabela_arrecadacao(df, data_alvo):
     """Formata o DataFrame da Tabela 5 para exibição."""
     if df.empty:
         return df
-    
-    try:
-        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-    except locale.Error:
-        locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
     
     # Pega os nomes dos meses
     mes_atual_nome = data_alvo.strftime('%B/%Y').capitalize()
@@ -98,10 +115,13 @@ def formatar_tabela_arrecadacao(df, data_alvo):
     # Renomeia as colunas
     df = df.rename(columns={'mes_passado': mes_passado_nome, 'mes_atual': mes_atual_nome})
 
+    # Função auxiliar para formatar moeda sem depender do locale global
+    def formatar_moeda(valor):
+        return f"R$ {valor:_.2f}".replace('.', 'X').replace(',', '.').replace('_', ',').replace('X', ',')
+
     # Formata as colunas de moeda
-    locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-    df[mes_passado_nome] = df[mes_passado_nome].apply(lambda x: locale.currency(x, grouping=True))
-    df[mes_atual_nome] = df[mes_atual_nome].apply(lambda x: locale.currency(x, grouping=True))
+    df[mes_passado_nome] = df[mes_passado_nome].apply(formatar_moeda)
+    df[mes_atual_nome] = df[mes_atual_nome].apply(formatar_moeda)
     
     # Formata a coluna de variação
     df['Variacao'] = df['Variacao'].apply(lambda x: f'{x:.2f}%'.replace('.',','))
@@ -134,12 +154,18 @@ def formatar_tabela_cargo(df):
     
     df_com_total = pd.concat([df, total_row], ignore_index=True)
 
+    # Função auxiliar para formatar moeda sem depender do locale global
+    def formatar_moeda(valor):
+        if isinstance(valor, (int, float)):
+            return f"R$ {valor:_.2f}".replace('.', 'X').replace(',', '.').replace('_', ',').replace('X', ',')
+        return valor
+
     # Formata as colunas
     df_com_total['RepresentatividadeContribuicao'] = df_com_total['RepresentatividadeContribuicao'].apply(lambda x: f'{x:.1f}%'.replace('.',',') if isinstance(x, (int, float)) else x)
-    df_com_total['ContribuicaoMedia'] = df_com_total['ContribuicaoMedia'].apply(lambda x: locale.currency(x, grouping=True) if isinstance(x, (int, float)) else x)
+    df_com_total['ContribuicaoMedia'] = df_com_total['ContribuicaoMedia'].apply(formatar_moeda)
     df_com_total['QuantidadeParticipantes'] = df_com_total['QuantidadeParticipantes'].apply(lambda x: f'{x:,.0f}'.replace(',','.') if isinstance(x, (int, float)) else x)
     df_com_total['RepresentatividadeParticipantes'] = df_com_total['RepresentatividadeParticipantes'].apply(lambda x: f'{x:.1f}%'.replace('.',',') if isinstance(x, (int, float)) else x)
-    df_com_total['TotalContribuicao'] = df_com_total['TotalContribuicao'].apply(lambda x: locale.currency(x, grouping=True) if isinstance(x, (int, float)) else x)
+    df_com_total['TotalContribuicao'] = df_com_total['TotalContribuicao'].apply(formatar_moeda)
 
     # Renomeia as colunas para a versão final, com acentos
     df_com_total.rename(columns={
@@ -295,24 +321,22 @@ def formatar_tabela_patrocinador(df):
     # Prepara df_com_total alinhando colunas
     df_com_total = pd.concat([pd.DataFrame([total_row]), df], ignore_index=True, sort=False)
 
-    # Formata valores: tenta ajustar locale
-    try:
-        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-    except locale.Error:
-        locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
+    # Função auxiliar para formatar moeda sem depender do locale global
+    def formatar_moeda(valor):
+        return f"R$ {valor:_.2f}".replace('.', 'X').replace(',', '.').replace('_', ',').replace('X', ',')
 
     # Formatação segura: aplica sobre df_com_total (inclui a linha TOTAL) para evitar
     # desalinhamento de tamanhos entre Series quando concatenamos a linha TOTAL.
     if contrib_mes_col in df_com_total.columns:
         contrib_mes_numeric = safe_numeric(contrib_mes_col, source_df=df_com_total)
-        df_com_total[contrib_mes_col] = contrib_mes_numeric.apply(lambda x: locale.currency(float(x), grouping=True))
+        df_com_total[contrib_mes_col] = contrib_mes_numeric.apply(lambda x: formatar_moeda(float(x)))
     else:
         # se não existir, cria coluna padronizada com tamanho correto
-        df_com_total['contribuicao_no_mes'] = [locale.currency(x, grouping=True) for x in [total_mes] + [0]*(len(df_com_total)-1)]
+        df_com_total['contribuicao_no_mes'] = [formatar_moeda(x) for x in [total_mes] + [0]*(len(df_com_total)-1)]
 
     # Formata contrib total a partir do df_com_total também
     contrib_total_numeric = safe_numeric(contrib_total_col, source_df=df_com_total)
-    df_com_total[contrib_total_col] = contrib_total_numeric.apply(lambda x: locale.currency(float(x), grouping=True))
+    df_com_total[contrib_total_col] = contrib_total_numeric.apply(lambda x: formatar_moeda(float(x)))
 
     # Formata percentuais se existirem
     # Função auxiliar para formatar colunas percentuais de forma segura

@@ -62,7 +62,14 @@ def gerar_imagem_tabela(df, nome_arquivo_saida, titulo_tabela):
     </style>
     """
     html_completo = f"<!DOCTYPE html><html><head>{css_estilo}</head><body>{html_titulo}{html_tabela}{html_footer}</body></html>"
-    options = {'--enable-local-file-access': None, 'quality': '100', 'width': 600, 'encoding': "UTF-8", 'zoom': 1.0}
+    options = {
+        '--enable-local-file-access': None, 
+        'quality': '100', 
+        'width': 600, 
+        'encoding': "UTF-8", 
+        'zoom': 1.0,
+        'quiet': '' # Adicionado para suprimir a saída do console
+    }
     try:
         imgkit.from_string(html_completo, nome_arquivo_saida, config=config, options=options)
         print(f"Imagem da tabela gerada: {nome_arquivo_saida}")

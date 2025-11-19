@@ -1,15 +1,16 @@
 import datetime
-import locale
 
 def gerar_query(ano, mes):
     """Gera a query para a Tabela 4 de arrecadação por competência, usando a lógica original do usuário."""
     
-    try:
-        locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
-    except locale.Error:
-        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')
-        
-    mes_ano_formatado = datetime.date(ano, mes, 1).strftime('%b/%Y').lower()
+    # Mapeamento robusto para abreviação de meses, independente do locale
+    mapa_mes_abbr = {
+        1: 'jan', 2: 'fev', 3: 'mar', 4: 'abr', 5: 'mai', 6: 'jun',
+        7: 'jul', 8: 'ago', 9: 'set', 10: 'out', 11: 'nov', 12: 'dez'
+    }
+    mes_abbr = mapa_mes_abbr.get(mes, 'unk') # 'unk' como fallback
+    
+    mes_ano_formatado = f"{mes_abbr}/{ano}"
 
     return f"""
     WITH dados_agrupados AS (

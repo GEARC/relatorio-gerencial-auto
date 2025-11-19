@@ -11,7 +11,6 @@ from config import DB_CONFIG
 from modules.relatorio import gerar_relatorio_word, converter_docx_para_pdf
 from modules.database import conectar_banco, buscar_dados
 from queries.tabela1_evolucao_adesoes import gerar_query as gerar_query_evolucao
-from queries.tabela1_evolucao_detalhes import gerar_query as gerar_query_evolucao_detalhes
 from queries.tabela_distribuicao_sexo import QUERY as query_distribuicao_sexo
 from queries.tabela2_distribuicao_cargos import gerar_query as gerar_query
 from queries.grafico1_piramide_etaria import QUERY as query_piramide_etaria
@@ -81,7 +80,6 @@ def salvar_tabelas_em_excel(dados_relatorio, caminho_saida, data_alvo, log_callb
     # Mapeia as chaves de dados para nomes de abas mais amigáveis
     mapa_tabelas = {
         'evolucao_adesoes': 'T1 - Evolução Adesões',
-        'evolucao_detalhes': 'T1 - Detalhes Evolução',
         'distribuicao_sexo': 'T - Distribuição por Sexo',
         'distribuicao_cargos': 'T2 - Distribuição Cargos',
         'adesoes_patrocinador': 'T3 - Adesões Patrocinador',
@@ -137,11 +135,6 @@ def executar_geracao_relatorio(ano, mes, log_callback=print):
         queries_executadas['Tabela 1 - Evolução das Adesões'] = query_evolucao_dinamica
         dados_relatorio['evolucao_adesoes'] = buscar_dados(query_evolucao_dinamica, engine, log_callback)
 
-        log_callback("Buscando dados para Detalhes da Evolução das Adesões...")
-        query_evolucao_detalhes_dinamica = gerar_query_evolucao_detalhes(ano_alvo, mes_alvo)
-        queries_executadas['Tabela 1 - Detalhes da Evolução'] = query_evolucao_detalhes_dinamica
-        dados_relatorio['evolucao_detalhes'] = buscar_dados(query_evolucao_detalhes_dinamica, engine, log_callback)
-        
         log_callback("Buscando dados para Distribuição por Sexo...")
         query_sexo_dinamica = query_distribuicao_sexo.replace('?', f"'{param_texto_data}'")
         queries_executadas['Tabela - Distribuição por Sexo'] = query_sexo_dinamica

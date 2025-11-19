@@ -162,7 +162,14 @@ def gerar_relatorio_word(dados, data_alvo, log_callback=print):
         
         # --- LÓGICA DE TEXTO DINÂMICO ATUALIZADA ---
         try:
-            nome_linha_mes = data_alvo.strftime('%b/%Y').lower()
+            # Mapeamento robusto para evitar problemas de locale no .exe ou GUI
+            mapa_mes_abbr = {
+                1: 'jan', 2: 'fev', 3: 'mar', 4: 'abr', 5: 'mai', 6: 'jun',
+                7: 'jul', 8: 'ago', 9: 'set', 10: 'out', 11: 'nov', 12: 'dez'
+            }
+            mes_abbr = mapa_mes_abbr[data_alvo.month]
+            nome_linha_mes = f"{mes_abbr}/{data_alvo.year}"
+
             df_temp = df_evolucao_formatado.set_index('Mês/Ano')
             aumento_participantes = int(df_temp.loc[nome_linha_mes, 'Total'])
             
@@ -385,7 +392,7 @@ def gerar_relatorio_word(dados, data_alvo, log_callback=print):
         paragrafo_grafico = doc.paragraphs[-1]; paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # --- NOVA SEÇÃO 2.8: PERCENTUAL DE CONTRIBUIÇÃO ---
-    contador_titulo3 += 1 # Incrementa o contador para a nova seção
+    contador_titulo3 += 1 # Incrementa para 2.8
     doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Percentual de Contribuição", style='Título 3')
 
     # Parágrafo 1 (estático)
@@ -472,6 +479,7 @@ def gerar_relatorio_word(dados, data_alvo, log_callback=print):
       # --- NOVA SEÇÃO 3: ARRECADAÇÃO ---
     contador_titulo2 += 1
     doc.add_paragraph(f'\n{contador_titulo2}. Arrecadação', style='Título 2')
+    contador_titulo3 = 0 # Reinicia o contador para a nova seção principal
     
     # --- Lógica do Texto e Tabela 4 ---
     df_arrec_tabela = dados.get('arrecadacao_tabela')
@@ -530,8 +538,8 @@ def gerar_relatorio_word(dados, data_alvo, log_callback=print):
         paragrafo_grafico.paragraph_format.space_before = Pt(0)
     
      # --- NOVA SEÇÃO 3.1: ARRECADAÇÃO DE CONTRIBUIÇÃO TOTAL ---
-    contador_titulo2 = 3 # Agora é a seção 3
-    contador_titulo3 = 1
+    # contador_titulo2 = 3 # Agora é a seção 3
+    contador_titulo3 += 1 # Incrementa para 3.1
     doc.add_paragraph(f"\n{contador_titulo2}.1. Arrecadação de contribuição total", style='Título 3')
     
     # Texto 1 (estático)
@@ -577,16 +585,21 @@ def gerar_relatorio_word(dados, data_alvo, log_callback=print):
         except Exception as e:
             log_callback(f"Aviso: não foi possível gerar o texto dinâmico da Tabela 5. Erro: {e}")
 
-    contador_titulo2 = 3 # Agora é a seção 3
-    contador_titulo3 += 1
-        # --- NOVA SEÇÃO 3.2: ARRECADAÇÃO POR CARGO ---
+    # --- SEÇÃO 3.2: ARRECADAÇÃO POR CARGO ---
+    contador_titulo3 += 1 # Incrementa para 3.2
     """Adiciona a seção 3.2 de Arrecadação por Cargo."""
-    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3} Arrecadação de contribuições por cargo", style='Título 3')
+    doc.add_paragraph(f"\n{contador_titulo2}.{contador_titulo3}. Arrecadação de contribuições por cargo", style='Título 3')
 
     df_cargo_raw = dados.get('arrecadacao_cargo')
     
     if df_cargo_raw is not None and not df_cargo_raw.empty:
         try:
+            # Função auxiliar para formatar moeda sem depender do locale global
+            def formatar_moeda(valor):
+                if isinstance(valor, (int, float)):
+                    return f"R$ {valor:_.2f}".replace('.', 'X').replace(',', '.').replace('_', ',').replace('X', ',')
+                return str(valor)
+
             # --- CORREÇÃO APLICADA AQUI ---
             # Ordena os dados usando o nome da coluna sem acento ('ContribuicaoMedia')
             df_ordenado = df_cargo_raw.sort_values(by='ContribuicaoMedia', ascending=False)
@@ -600,13 +613,13 @@ def gerar_relatorio_word(dados, data_alvo, log_callback=print):
             # Constrói o texto dinâmico (exemplo)
             texto_p1 = doc.add_paragraph(style='CorpoComRecuo')
             texto_p1.add_run("Analisando a contribuição média dos participantes patrocinados, observa-se que os Juízes e Membros ocupam a primeira posição, com um valor médio de ")
-            texto_p1.add_run(f"{locale.currency(juizes_media, grouping=True)}").bold = True
+            texto_p1.add_run(f"{formatar_moeda(juizes_media)}").bold = True
             texto_p1.add_run(", seguidos pelos Analistas, com ")
-            texto_p1.add_run(f"{locale.currency(analistas_media, grouping=True)}.").bold = True
+            texto_p1.add_run(f"{formatar_moeda(analistas_media)}.").bold = True
             texto_p1.add_run("Na sequência, aparecem os Auxiliares, com média de ")
-            texto_p1.add_run(f"{locale.currency(auxiliares_media, grouping=True)}.").bold = True
+            texto_p1.add_run(f"{formatar_moeda(auxiliares_media)}.").bold = True
             texto_p1.add_run(", e os Técnicos, com")
-            texto_p1.add_run(f"{locale.currency(tecnicos_media, grouping=True)}.").bold = True
+            texto_p1.add_run(f"{formatar_moeda(tecnicos_media)}.").bold = True
             
             # Adiciona os outros parágrafos
             doc.add_paragraph("Ressalta-se que o cenário apresentado considera apenas as contribuições normais, referentes ao mês corrente e às competências anteriores, tanto dos participantes quanto dos patrocinadores.", style='CorpoComRecuo')
@@ -669,15 +682,18 @@ def gerar_relatorio_word(dados, data_alvo, log_callback=print):
     
     if df_patrocinador_raw is not None and not df_patrocinador_raw.empty:
         # Texto dinâmico
-        patrocinador_mes = df_patrocinador_raw.iloc[0]['EMPRESA']
-        df_sorted_acumulado = df_patrocinador_raw.sort_values(by='CONTRIB_TOTAL', ascending=False)
-        patrocinador_acumulado = df_sorted_acumulado.iloc[0]['EMPRESA']
-        
-        doc.add_paragraph(
-            f"Em {data_alvo.strftime('%B/%Y')}, o {patrocinador_mes} ficou no topo do ranking na contribuição mensal e "
-            f"o {patrocinador_acumulado} continua com o maior patrimônio por patrocinador.",
-            style='CorpoComRecuo'
-        )
+        try:
+            patrocinador_mes = df_patrocinador_raw.iloc[0]['EMPRESA']
+            df_sorted_acumulado = df_patrocinador_raw.sort_values(by='CONTRIB_TOTAL', ascending=False)
+            patrocinador_acumulado = df_sorted_acumulado.iloc[0]['EMPRESA']
+            
+            doc.add_paragraph(
+                f"Em {data_alvo.strftime('%B/%Y')}, o {patrocinador_mes} ficou no topo do ranking na contribuição mensal e "
+                f"o {patrocinador_acumulado} continua com o maior patrimônio por patrocinador.",
+                style='CorpoComRecuo'
+            )
+        except (KeyError, IndexError) as e:
+            log_callback(f"Aviso: Não foi possível gerar o texto dinâmico da Tabela 7. Colunas podem estar ausentes. Erro: {e}")
 
         p_legenda_t3 = doc.add_paragraph("Tabela 7. Arrecadação e Patrimônio por patrocinador")
         p_legenda_t3.alignment = WD_ALIGN_PARAGRAPH.CENTER

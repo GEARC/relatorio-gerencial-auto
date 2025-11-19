@@ -122,12 +122,6 @@ class AppRelatorio:
 
 
 if __name__ == "__main__":
-    # Configura o locale para nomes de meses em português
-    try:
-        locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
-    except locale.Error:
-        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')
-
     app_root = tk.Tk()
     app = AppRelatorio(app_root)
     app_root.mainloop()

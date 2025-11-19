@@ -4140,10 +4140,6 @@
    'C:\\Users\\giovana.silva\\OneDrive - '
    'Funpresp-Jud\\Imagens\\relatorio-gerencial-auto\\queries\\tabela1_evolucao_adesoes.py',
    'PYMODULE'),
-  ('queries.tabela1_evolucao_detalhes',
-   'C:\\Users\\giovana.silva\\OneDrive - '
-   'Funpresp-Jud\\Imagens\\relatorio-gerencial-auto\\queries\\tabela1_evolucao_detalhes.py',
-   'PYMODULE'),
   ('queries.tabela2_distribuicao_cargos',
    'C:\\Users\\giovana.silva\\OneDrive - '
    'Funpresp-Jud\\Imagens\\relatorio-gerencial-auto\\queries\\tabela2_distribuicao_cargos.py',
