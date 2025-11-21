@@ -105,6 +105,7 @@ def criar_grafico_piramide_etaria(df, caminho_para_salvar, titulo_grafico):
         '82 a 84', '85 a 87', '88 a 90', '91 a 93', '94 a 96', 
         '97 a 99', '100 a 102', '103 a 105', 'Maior que 105'
     ]
+
     df_pivot = df_pivot.reindex(ordem_correta).dropna()
 
     if df_pivot.empty:
@@ -118,6 +119,7 @@ def criar_grafico_piramide_etaria(df, caminho_para_salvar, titulo_grafico):
     
     ax.barh(df_pivot.index, df_pivot['Feminino'], color='#9b2242', label='Feminino')
     ax.barh(df_pivot.index, df_pivot['Masculino'], color='#003366', label='Masculino')
+    ax.invert_yaxis()
     limite_eixo = ax.get_xlim()[1]
     limite_texto = limite_eixo * 0.15 
     for i, (valor_m, valor_f) in enumerate(zip(df_pivot['Masculino'], df_pivot['Feminino'])):
