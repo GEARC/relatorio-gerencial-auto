@@ -114,6 +114,13 @@ def executar_geracao_relatorio(ano, mes, log_callback=print):
     :param mes: O mês do relatório.
     :param log_callback: Uma função para registrar mensagens de progresso.
     """
+    # --- CONFIGURAÇÃO DE LOCALE ---
+    # Garante que os nomes dos meses sejam em português, independentemente de como o script é chamado.
+    try:
+        locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
+    except locale.Error:
+        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')
+
     data_alvo = datetime.date(ano, mes, 1)
     ano_alvo = data_alvo.year
     mes_alvo = data_alvo.month
@@ -281,8 +288,4 @@ def main():
     executar_geracao_relatorio(data_alvo.year, data_alvo.month)
 
 if __name__ == "__main__":
-    try:
-        locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
-    except locale.Error:
-        locale.setlocale(locale.LC_TIME, 'Portuguese_Brazil.1252')
     main()
