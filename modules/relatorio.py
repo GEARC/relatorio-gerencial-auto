@@ -143,7 +143,7 @@ def gerar_relatorio_word(dados, data_alvo):
     doc.add_paragraph(f'\n{contador_titulo2}. Cadastro', style='Título 2')
     contador_titulo3 = 1
     
-    # --- 2.1 EVOLUÇÃO DAS ADESÕES (SEÇÃO REATIVADA) ---
+    # --- 2.1 EVOLUÇÃO DAS ADESÕES ---
     doc.add_paragraph(f"{contador_titulo2}.{contador_titulo3}. Evolução das Adesões", style='Título 3')
     
     df_evolucao_raw = dados.get('evolucao_adesoes')
@@ -222,7 +222,7 @@ def gerar_relatorio_word(dados, data_alvo):
         try:
             contagem_por_faixa = df_piramide.groupby('Faixa_Etaria')['QTD'].sum()
             maior_faixa = contagem_por_faixa.idxmax()
-            texto_concentracao = f"A maior concentração de participantes está distribuída entre as idades de {maior_faixa}."
+            texto_concentracao = f"A maior concentração de participantes encontra-se na faixa etária de {maior_faixa}."
             doc.add_paragraph(texto_concentracao, style='CorpoComRecuo')
         except Exception as e:
             print(f"Erro ao calcular a maior faixa etária: {e}")
@@ -362,7 +362,7 @@ def gerar_relatorio_word(dados, data_alvo):
     p_lei.add_run(", houve uma importante alteração no regime de tributação para os participantes de planos de previdência complementar. Agora, ")
     p_lei.add_run("os participantes").bold = True
     p_lei.add_run(" têm a liberdade de escolher entre os regimes ")
-    p_lei.add_run("progressivo ou regressivo").bold = True
+    p_lei.add_run("progressivo e regressivo").bold = True
     p_lei.add_run(" no momento da obtenção do benefício ou do primeiro resgate dos valores acumulados.")
     # --- FIM DA LÓGICA DE TEXTO ---
 
@@ -384,7 +384,7 @@ def gerar_relatorio_word(dados, data_alvo):
     # Parágrafo 1 (estático)
     doc.add_paragraph(
         "Um bom sinal da qualidade da opção dos participantes é relacionado ao percentual escolhido. "
-        "Segregando as categorias de participantes vinculados e patrocinados percebemos a opção oposta "
+        "Segregando as categorias de participantes vinculados e patrocinados, percebe-se opção oposta "
         "em relação à escolha do percentual de contribuição mensal.",
         style='CorpoComRecuo'
     )
@@ -427,7 +427,7 @@ def gerar_relatorio_word(dados, data_alvo):
             perc_vinc_65_mes_str = f"{perc_vinc_65_mes:.2f}".replace('.', ',')
             perc_vinc_65_acum_str = f"{perc_vinc_65_acum:.2f}".replace('.', ',')
             texto_vinculados = (
-                f"Para os participantes vinculados a melhor opção é a escolha do percentual mínimo (6,5%), "
+                f"Para os participantes vinculados, a melhor opção é a escolha do percentual mínimo (6,5%), "
                 f"com o objetivo de aproveitar a isenção da taxa de carregamento sobre a contribuição facultativa. "
                 f"Em {data_alvo.strftime('%B/%Y')}, {perc_vinc_65_mes_str}% dos participantes vinculados optaram pelo percentual de 6,5% "
                 f"e a opção pelo percentual mínimo chega a {perc_vinc_65_acum_str}% da preferência dos participantes "
@@ -596,9 +596,9 @@ def gerar_relatorio_word(dados, data_alvo):
             texto_p1.add_run(f"{locale.currency(juizes_media, grouping=True)}").bold = True
             texto_p1.add_run(", seguidos pelos Analistas, com ")
             texto_p1.add_run(f"{locale.currency(analistas_media, grouping=True)}.").bold = True
-            texto_p1.add_run("Na sequência, aparecem os Auxiliares, com média de ")
-            texto_p1.add_run(f"{locale.currency(auxiliares_media, grouping=True)}.").bold = True
-            texto_p1.add_run(", e os Técnicos, com")
+            texto_p1.add_run(" Na sequência, aparecem os Auxiliares, com média de ")
+            texto_p1.add_run(f"{locale.currency(auxiliares_media, grouping=True)}").bold = True
+            texto_p1.add_run(", e os Técnicos, com ")
             texto_p1.add_run(f"{locale.currency(tecnicos_media, grouping=True)}.").bold = True
             
             # Adiciona os outros parágrafos
@@ -668,7 +668,7 @@ def gerar_relatorio_word(dados, data_alvo):
         
         doc.add_paragraph(
             f"Em {data_alvo.strftime('%B/%Y')}, o {patrocinador_mes} ficou no topo do ranking na contribuição mensal e "
-            f"o {patrocinador_acumulado} continua com o maior patrimônio por patrocinador.",
+            f"continua com o maior patrimônio por patrocinador.",
             style='CorpoComRecuo'
         )
 

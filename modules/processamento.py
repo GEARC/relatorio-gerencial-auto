@@ -23,7 +23,6 @@ def transformar_dados_evolucao(df_geral_raw, df_detalhes_raw, data_alvo):
         if idx.startswith('saldo_'): novos_nomes_geral[idx] = f"Saldo {ano_anterior}"
         elif idx.startswith('acumulado_'): novos_nomes_geral[idx] = f"Acumulado/{ano}"
         else:
-            # Correção para o formato do mês (ex: 'set' em vez de 'sep')
             partes = idx.split('_')
             if len(partes) > 1 and partes[0] == 'sep':
                 partes[0] = 'set'
@@ -43,27 +42,27 @@ def transformar_dados_evolucao(df_geral_raw, df_detalhes_raw, data_alvo):
     
     # --- 4. Monta a tabela final com a estrutura correta ---
     
-    # Define a estrutura do cabeçalho de duas linhas (MultiIndex)
+    # CORREÇÃO 1: Removi ('Mês/Ano', '') desta lista. 
+    # O Mês/Ano virá do índice, não precisamos criar uma coluna vazia para ele.
     colunas_finais = pd.MultiIndex.from_tuples([
-        ('Mês/Ano', ''), ('Patrocinado', ''), ('Vinculado', ''), ('BPD', 'Patrocinado'), ('BPD', 'Vinculado'),
+        ('Patrocinado', ''), ('Vinculado', ''), ('BPD', 'Patrocinado'), ('BPD', 'Vinculado'),
         ('Autopatrocinado', 'Patrocinado'), ('Autopatrocinado', 'Vinculado'),
         ('No prazo opção dos institutos', ''), ('Assistido', '')
     ])
     
-    # Cria o DataFrame final com a estrutura correta
     df_final = pd.DataFrame(index=df_combinado.index, columns=colunas_finais)
 
-    # Preenche o DataFrame final com os dados combinados
     df_final[('Patrocinado', '')] = df_combinado.get('PATROCINADO', 0)
     df_final[('Vinculado', '')] = df_combinado.get('VINCULADO', 0)
-    df_final[('BPD', 'Patrocinado')] = df_combinado.get(('BPD', 'Patrocinado'), 0)
+    bpd_generico = df_combinado.get('BPD - SALDO', 0) 
+    df_final[('BPD', 'Patrocinado')] = df_combinado.get(('BPD', 'Patrocinado'), 0) + bpd_generico
     df_final[('BPD', 'Vinculado')] = df_combinado.get(('BPD', 'Vinculado'), 0)
-    df_final[('Autopatrocinado', 'Patrocinado')] = df_combinado.get(('AUTOPATROCINADO', 'Patrocinado'), 0)
+    autopat_generico = df_combinado.get('AUTOPATROCINADO', 0)
+    df_final[('Autopatrocinado', 'Patrocinado')] = df_combinado.get(('AUTOPATROCINADO', 'Patrocinado'), 0) + autopat_generico
     df_final[('Autopatrocinado', 'Vinculado')] = df_combinado.get(('AUTOPATROCINADO', 'Vinculado'), 0)
     df_final[('No prazo opção dos institutos', '')] = df_combinado.get('NO PRAZO OPÇÃO INSTITUTOS', 0)
     df_final[('Assistido', '')] = df_combinado.get('ASSISTIDO', 0)
     
-    # Correção para o FutureWarning do Pandas
     df_final = df_final.fillna(0).infer_objects(copy=False).astype(int)
     
     # Adiciona a coluna Total
@@ -73,11 +72,22 @@ def transformar_dados_evolucao(df_geral_raw, df_detalhes_raw, data_alvo):
     acumulado_total_row = df_final.loc[f"Saldo {ano_anterior}"] + df_final.loc[f"Acumulado/{ano}"]
     df_final.loc['Acumulado Total'] = acumulado_total_row
     
-    # Prepara o DataFrame para ser usado pela função que gera a imagem
-    df_final.reset_index(inplace=True)
-    df_final.columns = [' '.join(col).strip() for col in df_final.columns.values]
+    # --- CORREÇÃO 2: Tratamento final para ajustar o nome da coluna ---
     
-    return df_final.rename(columns={'Mês/Ano ': 'Mês/Ano'})
+    # Dá o nome correto ao índice antes de resetar
+    df_final.index.name = 'Mês/Ano'
+    
+    # Traz o índice para virar coluna
+    df_final.reset_index(inplace=True)
+    
+    # Achata os nomes das colunas (MultiIndex -> String única)
+    # A verificação 'if isinstance' evita erro se alguma coluna já for string
+    df_final.columns = [
+        ' '.join(col).strip() if isinstance(col, tuple) else col 
+        for col in df_final.columns.values
+    ]
+    
+    return df_final
 
 
 def formatar_tabela_arrecadacao(df, data_alvo):
@@ -165,10 +175,8 @@ def formatar_tabela_patrocinador(df):
 
     df = df.copy()
 
-    # Normaliza nomes: tira espaços e converte para string
     df.columns = [c.strip() if isinstance(c, str) else c for c in df.columns]
 
-    # Mapeia colunas por nome lower para achar correspondentes tolerantes
     cols_lower = {c.lower(): c for c in df.columns if isinstance(c, str)}
 
     def find_col(substring):
@@ -178,14 +186,9 @@ def formatar_tabela_patrocinador(df):
                 return orig
         return None
 
-    # aceita tanto 'patrocinador' quanto 'empresa' (a query usa EMPRESA)
     patrocinador_col = find_col('patrocinador') or find_col('empresa') or find_col('emp')
     contrib_mes_col = find_col('mes') or find_col('contribuicao') or find_col('contrib')
-    # Detecta coluna de contribuições acumuladas: procura por colunas que contenham
-    # 'contrib' e também uma marca de total/acumulado; só como último recurso aceita
-    # colunas que contenham apenas 'contrib' ou 'acumul' para evitar capturar
-    # colunas genéricas como 'representatividade_total'. Isso evita mapear a coluna
-    # de total para uma coluna de representatividade.
+
     contrib_total_col = None
     for k, orig in cols_lower.items():
         if 'contrib' in k and ('total' in k or 'acumul' in k or 'acumulad' in k):
@@ -201,14 +204,6 @@ def formatar_tabela_patrocinador(df):
                 return orig
         return None
 
-    # Detecta representatividades com heurísticas mais específicas. Evita o
-    # fallback genérico 'represent' para não capturar a mesma coluna para ambas
-    # as representatividades (caso comum quando a origem usa algo como
-    # 'representatividade_total'). Primeiro procura por termos que indiquem
-    # representatividade da contribuição; só usa correspondências mais gerais
-    # como último recurso.
-    # Prioriza colunas explícitas usadas por algumas queries
-    # Aceita várias grafias/variações que aparecem nas queries: "prec", "perc" ou sem sufixo
     explicit_repr_mes = (
         cols_lower.get('representatividade_mes_prec')
         or cols_lower.get('representatividade_mes_perc')
@@ -250,11 +245,6 @@ def formatar_tabela_patrocinador(df):
         """Converte coluna para numérico de forma segura a partir de `source_df` ou `df` por padrão."""
         src = source_df if source_df is not None else df
         if col in src.columns:
-            # Normaliza diferentes formatos numéricos:
-            # - Se a string contém ',' assume-se formato pt_BR (milhar '.' e decimal ',')
-            #   então removemos pontos e substituímos ',' por '.' para conversão.
-            # - Se contém '.' e NÃO contém ',' assume-se que o ponto é decimal (ex: 1234.56)
-            #   então removemos possíveis espaços e convertemos diretamente.
             s = src[col].astype(str).str.strip()
 
             has_comma = s.str.contains(',', regex=False)
@@ -333,12 +323,6 @@ def formatar_tabela_patrocinador(df):
         else:
             df_com_total[copy_name] = df_com_total[repr_contrib_col]
             repr_patr_col = copy_name
-
-    # Caso o usuário tenha solicitado que a representatividade da contribuição
-    # seja a mesma que 'representatividade_mes_prec' e a representatividade do
-    # patrimônio seja a mesma que 'representatividade_total_prec', garantimos
-    # que esses nomes finais sejam usados quando as colunas explícitas existem.
-    # (A renomeação abaixo fará o mapeamento para os rótulos exibidos.)
 
     format_percent_column(df_com_total, repr_contrib_col)
     format_percent_column(df_com_total, repr_patr_col)
