@@ -18,6 +18,7 @@ from queries.grafico2_adesao_ramo_mes import gerar_query as gerar_query_g2_ramo_
 from queries.grafico3_adesao_ramo_acumulado import gerar_query as gerar_query_g3_ramo_acumulado
 from queries.tabela3_adesoes_patrocinador import gerar_query as gerar_query_patrocinador
 from queries.tabela4_arrecadacao_mes import gerar_query as gerar_query_tabela4
+from queries.tabela4_texto_dinamico import gerar_query as gerar_query_texto_dinamico
 from queries.tabela5_arrecadacao_tipo import gerar_query as gerar_query_tabela5
 from queries.grafico4_tributacao_mes import gerar_query as gerar_query_g4_tributacao
 from queries.grafico5_tributacao_acumulado import gerar_query as gerar_query_g5_tributacao
@@ -124,6 +125,10 @@ def main():
         print("\nBuscando dados para a Tabela de Arrecadação...")
         query_t4_dinamica = gerar_query_tabela4(ano_alvo, mes_alvo)
         dados_relatorio['arrecadacao_tabela'] = buscar_dados(query_t4_dinamica, engine)
+
+        print("\nBuscando dados para texto dinâmico...")
+        query_auto = gerar_query_texto_dinamico(ano_alvo, mes_alvo)
+        dados_relatorio['valor_texto_dinamico'] = buscar_dados(query_auto, engine)
 
         print("\nBuscando dados para o Gráfico de Paridade...")
         query_g8_dinamica = gerar_query_grafico8(ano_alvo, mes_alvo)

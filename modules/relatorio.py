@@ -492,26 +492,39 @@ def gerar_relatorio_word(dados, data_alvo):
 
     # --- Lógica do Texto e Gráfico 8 ---
     df_arrec_grafico = dados.get('arrecadacao_grafico')
+    df_auto = dados.get('valor_texto_dinamico')
     
     # --- CORREÇÃO: Adiciona o texto dinâmico ---
     if df_arrec_grafico is not None and not df_arrec_grafico.empty:
         try:
-            # Extrai valores para o texto
             s_paridade = df_arrec_grafico.set_index('Categoria')['Valor']
             contrib_participante = s_paridade.get('PARTICIPANTE', 0)
             contrib_patrocinador = s_paridade.get('PATROCINADOR', 0)
             diferenca = abs(contrib_participante - contrib_patrocinador)
             
-            # Formata o valor da diferença como moeda brasileira
-            diferenca_formatada = f"R$ {diferenca:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            
+            valor_auto = 0
+            if df_auto is not None and not df_auto.empty:
+                valor_auto = df_auto.iloc[0, 0]
+
+            def formatar_brl(valor):
+                return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+            diferenca_formatada = formatar_brl(diferenca)
+            auto_formatado = formatar_brl(valor_auto)
+
             p_paridade = doc.add_paragraph(style='CorpoComRecuo')
             p_paridade.add_run("Verificamos a paridade das contribuições entre participante e patrocinador, identificando uma diferença de ")
             p_paridade.add_run(diferenca_formatada).bold = True
-            p_paridade.add_run(". Grande parte desse valor se deve ao repasse realizado por um dos órgãos apenas da contribuição dos participantes, sem o correspondente aporte do patrocinador.")
+            
+            if diferenca > 0 and (valor_auto / diferenca) >= 0.70:
+                p_paridade.add_run(", dessa diferença, a maior parte corresponde as contribuições normais recebidas de Autopatrocinio, que totalizam ")
+                p_paridade.add_run(auto_formatado).bold = True
+                p_paridade.add_run(".")
+            else:
+                p_paridade.add_run(".")
 
         except Exception as e:
-            print(f"Aviso: Não foi possível gerar texto dinâmico de paridade. Erro: {e}")
+            print(f"Aviso: Erro na lógica do texto dinâmico de paridade: {e}")
 
     caminho_g8 = os.path.join('assets', 'grafico_paridade.png')
     
@@ -521,7 +534,7 @@ def gerar_relatorio_word(dados, data_alvo):
         paragrafo_grafico = doc.paragraphs[-1]
         paragrafo_grafico.alignment = WD_ALIGN_PARAGRAPH.CENTER
         paragrafo_grafico.paragraph_format.space_before = Pt(0)
-    
+
      # --- NOVA SEÇÃO 3.1: ARRECADAÇÃO DE CONTRIBUIÇÃO TOTAL ---
     contador_titulo2 = 3 # Agora é a seção 3
     contador_titulo3 = 1

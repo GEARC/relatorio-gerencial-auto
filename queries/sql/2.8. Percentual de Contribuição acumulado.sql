@@ -1,0 +1,18 @@
+--QTD percentual geral
+select count(ps.ID_SITUACAO) QTD, ps.NM_SITUACAO, h.PC_CONTRIB PERCENTUAL
+from ENCERRAMENTO_PLANO_PARTIC e, PLANO_SITUACAO ps, HIST_CONTRIBUICAO_PERCENTUAL h
+where e.ID_PESSOA = h.ID_PESSOA
+and h.ID_CONTRIBUICAO in (1,7)
+and e.ID_SITUACAO = ps.ID_SITUACAO
+and h.DT_VIGENCIA = (select max(h2.dt_vigencia) 
+					from HIST_CONTRIBUICAO_PERCENTUAL h2
+					where h2.ID_PESSOA = h.ID_PESSOA
+					and h2.ID_CONTRIBUICAO = h.ID_CONTRIBUICAO 
+					)
+and e.NR_ANO_REF = 2025
+and e.NR_MES_REF = 5
+and e.ID_SITUACAO IN (1, 2)
+and e.NR_ANO_REF = 2025 
+AND e.NR_MES_REF = 5
+and h.PC_CONTRIB > 0
+group by ps.NM_SITUACAO,ps.ID_SITUACAO, h.PC_CONTRIB
